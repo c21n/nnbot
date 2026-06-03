@@ -394,6 +394,38 @@ export interface AdminConfig {
 }
 
 /**
+ * Memory system configuration
+ */
+export interface MemoryConfig {
+  enabled: boolean;
+  embedding: {
+    apiKey: string;
+    model?: string;
+    dimension?: number;
+  };
+  llm?: {
+    apiKey: string;
+  };
+  chromadb?: {
+    url: string;
+  };
+  redis?: {
+    url: string;
+  };
+  sqlite?: {
+    path: string;
+  };
+  search?: {
+    maxMemories?: number;
+    minScore?: number;
+  };
+  lifecycle?: {
+    maxMemoriesPerUser?: number;
+    summaryTriggerRounds?: number;
+  };
+}
+
+/**
  * Root configuration
  */
 export interface Config {
@@ -405,6 +437,7 @@ export interface Config {
   rules: Rule[];
   admin: AdminConfig;
   context: ContextConfig;
+  memory?: MemoryConfig;
 }
 
 /**

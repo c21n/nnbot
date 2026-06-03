@@ -52,17 +52,39 @@ export default createPlugin({
       return;
     }
 
-    const siliconflowKey = process.env.SILICONFLOW_API_KEY ?? "";
-    const deepseekKey = process.env.DEEPSEEK_API_KEY ?? "";
+    const memoryConfig = config.memory;
+    if (!memoryConfig?.enabled) {
+      logger.info("[Memory] Disabled in config");
+      return;
+    }
 
-    if (!siliconflowKey || !deepseekKey) {
-      logger.warn("[Memory] Missing API keys, disabled");
+    const siliconflowKey = memoryConfig.embedding?.apiKey ?? "";
+    const deepseekKey = memoryConfig.llm?.apiKey ?? "";
+
+    if (!siliconflowKey) {
+      logger.warn("[Memory] Missing embedding API key, disabled");
+      return;
+    }
+
+    if (!deepseekKey) {
+      logger.warn("[Memory] Missing LLM API key, disabled");
       return;
     }
 
     try {
       // Redirect memory module logs through CHATBOT's logger for consistent format
       setCustomLogger(logger);
+
+      // Apply config overrides
+      if (memoryConfig.chromadb?.url) {
+        process.env.CHROMADB_URL = memoryConfig.chromadb.url;
+      }
+      if (memoryConfig.sqlite?.path) {
+        process.env.SQLITE_PATH = memoryConfig.sqlite.path;
+      }
+      if (memoryConfig.redis?.url) {
+        process.env.REDIS_URL = memoryConfig.redis.url;
+      }
 
       getSqliteConnection();
 
