@@ -2,6 +2,7 @@
  * Admin Plugin
  *
  * Handles admin commands for bot management.
+ * Uses class format for complex command handling.
  */
 
 import type {
@@ -14,27 +15,32 @@ import type {
   PluginServices,
 } from "../interfaces.js";
 import { PersonaService } from "../services/persona.js";
+import { createPlugin } from "../core/create-plugin.js";
+import { PLUGIN_PRIORITY } from "../constants.js";
 import { logger } from "../core/logger.js";
 
-export class AdminPlugin implements IPlugin {
+/**
+ * Admin Plugin implementation
+ * Uses class for complex command handling
+ */
+class AdminPluginImpl {
   readonly name = "admin";
   readonly version = "1.0.0";
   readonly description = "管理命令插件";
+  readonly priority = PLUGIN_PRIORITY.ADMIN;
 
-  private commands: Map<string, (event: Event, args: string) => Promise<string>>;
-  private personaService: PersonaService | null = null;
-  private conversationStorage: IConversationStorage | null = null;
-  private services: PluginServices | null = null;
+  private commands!: Map<string, (event: Event, args: string) => Promise<string>>;
+  private personaService!: PersonaService | null;
+  private conversationStorage!: IConversationStorage | null;
+  private services!: PluginServices;
 
-  constructor(
-    private pluginManager: IPluginManager,
-    private config: Config,
-    kvStorage?: { get: (key: string) => Promise<unknown | null>; set: (key: string, value: unknown) => Promise<void>; delete: (key: string) => Promise<void> },
-    services?: PluginServices
-  ) {
-    this.personaService = kvStorage ? new PersonaService(kvStorage) : null;
-    this.conversationStorage = kvStorage as IConversationStorage | null;
-    this.services = services ?? null;
+  /**
+   * Initialize plugin with services
+   */
+  async initialize(services: PluginServices): Promise<void> {
+    this.services = services;
+    this.personaService = new PersonaService(services.storage);
+    this.conversationStorage = services.storage;
 
     this.commands = new Map([
       ["/help", this.cmdHelp.bind(this)],
@@ -205,12 +211,12 @@ export class AdminPlugin implements IPlugin {
       if (args) {
         // Reload specific plugin
         const pluginName = args.trim();
-        await this.pluginManager.reloadPlugin(pluginName, this.services);
+        await this.services.pluginManager.reloadPlugin(pluginName, this.services);
         return `插件 "${pluginName}" 重载成功`;
       } else {
         // Reload all plugins
-        await this.pluginManager.reloadAll(this.services);
-        const plugins = this.pluginManager.getPlugins();
+        await this.services.pluginManager.reloadAll(this.services);
+        const plugins = this.services.pluginManager.getPlugins();
         return `所有插件已重载，共 ${plugins.length} 个`;
       }
     } catch (error) {
@@ -219,3 +225,27 @@ export class AdminPlugin implements IPlugin {
     }
   }
 }
+
+// Create plugin wrapper using createPlugin
+const adminImpl = new AdminPluginImpl();
+
+export default createPlugin({
+  name: "admin",
+  description: "管理命令插件",
+  priority: PLUGIN_PRIORITY.ADMIN,
+
+  async onLoad(services) {
+    await adminImpl.initialize(services);
+  },
+
+  async handle(event) {
+    return adminImpl.handle(event);
+  },
+
+  help() {
+    return adminImpl.help();
+  },
+});
+
+// Export class for backward compatibility
+export { AdminPluginImpl as AdminPlugin };

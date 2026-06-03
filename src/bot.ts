@@ -2,21 +2,24 @@
  * NNBot - Main Entry Point
  *
  * Lightweight QQ Bot with plugin system.
+ * Uses PluginManager.loadFromDir for automatic plugin discovery.
  */
 
 import "dotenv/config";
 import Fastify from "fastify";
+import { resolve } from "path";
 import { ConfigManager } from "./core/config.js";
 import { PluginManager } from "./core/plugin-manager.js";
+import { HotReloadManager } from "./core/hot-reload-manager.js";
 import { MessageBuffer } from "./core/message-buffer.js";
 import { logger } from "./core/logger.js";
 import { SQLiteStorage } from "./services/storage/sqlite.js";
 import { OpenAICompatibleService } from "./services/llm/openai.js";
 import { OneBotAdapter } from "./utils/onebot.js";
-import { AIChatPlugin } from "./plugins/ai-chat.js";
-import { RuleMatchPlugin } from "./plugins/rule-match.js";
-import { AdminPlugin } from "./plugins/admin.js";
 import { MemoryAdapter } from "./plugins/memory-adapter.js";
+import type { PluginServices } from "./interfaces.js";
+
+const PLUGINS_DIR = resolve(import.meta.dirname, "plugins");
 
 async function main() {
   // Load configuration
@@ -63,19 +66,23 @@ async function main() {
   // Initialize plugin manager
   const pluginManager = new PluginManager();
 
-  // Register plugins (order matters: admin first to handle / commands)
-  if (config.plugins.enabled.includes("admin")) {
-    await pluginManager.register(new AdminPlugin(pluginManager, config, storage));
-  }
+  // Create plugin services
+  const services: PluginServices = {
+    llm,
+    storage,
+    config,
+    pluginManager,
+  };
 
-  if (config.plugins.enabled.includes("rule_match")) {
-    await pluginManager.register(new RuleMatchPlugin(config.rules));
-  }
+  // Load plugins from directory (auto-discovery)
+  await pluginManager.loadFromDir(PLUGINS_DIR, services);
+  logger.info(`Loaded ${pluginManager.getPlugins().length} plugins`);
 
-  if (config.plugins.enabled.includes("ai_chat")) {
-    await pluginManager.register(
-      new AIChatPlugin(llm, storage, storage, config, memoryAdapter.getHooks())
-    );
+  // Initialize hot reload manager
+  const hotReloadManager = new HotReloadManager(pluginManager, pluginManager.loader, services);
+  if (process.env.NODE_ENV !== "production") {
+    await hotReloadManager.startWatching(PLUGINS_DIR);
+    logger.info("Hot reload enabled (development mode)");
   }
 
   // Message buffer for handling multi-part messages
@@ -163,6 +170,9 @@ async function main() {
   // Graceful shutdown
   const shutdown = async () => {
     logger.info("Shutting down...");
+
+    // Stop hot reload
+    hotReloadManager.stopWatching();
 
     // Shutdown memory adapter
     await memoryAdapter.shutdown();

@@ -2,6 +2,7 @@
  * AI Chat Plugin
  *
  * Handles conversations using LLM with context memory, persona, and summary compression.
+ * Uses class format with createPlugin wrapper for compatibility with PluginLoader.
  */
 
 import type {
@@ -12,9 +13,12 @@ import type {
   IConversationStorage,
   Config,
   AIChatHooks,
+  PluginServices,
 } from "../interfaces.js";
 import { PersonaService } from "../services/persona.js";
 import { OpenAICompatibleService } from "../services/llm/openai.js";
+import { createPlugin } from "../core/create-plugin.js";
+import { PLUGIN_PRIORITY } from "../constants.js";
 import { logger } from "../core/logger.js";
 
 const SUMMARY_PROMPT = `请将以下对话压缩成一段简短的摘要，保留关键信息（用户的需求、重要的事实、结论等）。
@@ -23,30 +27,35 @@ const SUMMARY_PROMPT = `请将以下对话压缩成一段简短的摘要，保�
 
 对话内容：`;
 
-export class AIChatPlugin implements IPlugin {
+/**
+ * AI Chat Plugin implementation
+ * Uses class for complex internal state and methods
+ */
+class AIChatPluginImpl {
   readonly name = "ai_chat";
   readonly version = "1.0.0";
   readonly description = "AI 对话插件 - 支持上下文、人格设定和摘要压缩";
+  readonly priority = PLUGIN_PRIORITY.AI_CHAT;
 
-  private persona: PersonaService;
-  private historyLimit: number;
-  private kvStorage: { get: (key: string) => Promise<unknown | null>; set: (key: string, value: unknown) => Promise<void>; delete: (key: string) => Promise<void> };
-  private llm: ILLMService;
-  private summaryLlm: ILLMService;
+  private persona!: PersonaService;
+  private historyLimit!: number;
+  private kvStorage!: { get: (key: string) => Promise<unknown | null>; set: (key: string, value: unknown) => Promise<void>; delete: (key: string) => Promise<void> };
+  private llm!: ILLMService;
+  private summaryLlm!: ILLMService;
+  private storage!: IConversationStorage;
+  private hooks: AIChatHooks = {};
 
-  constructor(
-    defaultLlm: ILLMService,
-    private storage: IConversationStorage,
-    kvStorage: { get: (key: string) => Promise<unknown | null>; set: (key: string, value: unknown) => Promise<void>; delete: (key: string) => Promise<void> },
-    private config: Config,
-    private hooks: AIChatHooks = {}
-  ) {
-    this.persona = new PersonaService(kvStorage);
-    this.historyLimit = config.context?.historyLimit ?? 10;
-    this.kvStorage = kvStorage;
+  /**
+   * Initialize plugin with services
+   */
+  async initialize(services: PluginServices): Promise<void> {
+    this.storage = services.storage;
+    this.kvStorage = services.storage;
+    this.persona = new PersonaService(services.storage);
+    this.historyLimit = services.config.context?.historyLimit ?? 10;
 
     // Check for plugin-specific LLM config
-    const pluginConfig = config.plugins?.ai_chat;
+    const pluginConfig = services.config.plugins?.ai_chat;
     if (pluginConfig?.llm) {
       logger.info("[ai_chat] 使用独立 LLM 配置");
       this.llm = new OpenAICompatibleService(
@@ -61,17 +70,9 @@ export class AIChatPlugin implements IPlugin {
       this.summaryLlm = this.llm;
     } else {
       logger.info("[ai_chat] 使用默认 LLM 配置");
-      this.llm = defaultLlm;
-      this.summaryLlm = defaultLlm;
+      this.llm = services.llm;
+      this.summaryLlm = services.llm;
     }
-  }
-
-  async onLoad(): Promise<void> {
-    // Nothing to initialize
-  }
-
-  async onUnload(): Promise<void> {
-    // Nothing to cleanup
   }
 
   async handle(event: Event): Promise<Response | null> {
@@ -247,3 +248,27 @@ export class AIChatPlugin implements IPlugin {
     return parts.join("\n");
   }
 }
+
+// Create plugin wrapper using createPlugin
+const aiChatImpl = new AIChatPluginImpl();
+
+export default createPlugin({
+  name: "ai_chat",
+  description: "AI 对话插件 - 支持上下文、人格设定和摘要压缩",
+  priority: PLUGIN_PRIORITY.AI_CHAT,
+
+  async onLoad(services) {
+    await aiChatImpl.initialize(services);
+  },
+
+  async handle(event) {
+    return aiChatImpl.handle(event);
+  },
+
+  help() {
+    return aiChatImpl.help();
+  },
+});
+
+// Export class for backward compatibility (admin plugin access)
+export { AIChatPluginImpl as AIChatPlugin };

@@ -50,6 +50,9 @@ export function createPlugin(def: PluginDefinition): IPlugin {
      * Get help text
      */
     help(): string {
+      if (typeof def.help === "function") {
+        return def.help();
+      }
       return def.help ?? "";
     },
 

@@ -216,8 +216,8 @@ export interface PluginDefinition {
   /** Execution priority, lower = earlier (optional, default: 100) */
   readonly priority?: number;
 
-  /** Help text (optional, default: "") */
-  readonly help?: string;
+  /** Help text or function (optional, default: "") */
+  readonly help?: string | (() => string);
 
   /**
    * Event handler (required)
