@@ -60,7 +60,12 @@ function createMockServices(config?: Config): PluginServices {
       dispatch: vi.fn(),
       getPlugins: vi.fn().mockReturnValue([]),
       getPlugin: vi.fn(),
+      getHooks: vi.fn().mockReturnValue({}),
+      loadFromDir: vi.fn(),
+      reloadPlugin: vi.fn(),
+      reloadAll: vi.fn(),
     },
+    hooks: {},
   };
 }
 

@@ -73,6 +73,12 @@ export interface IPlugin {
   handle(event: Event): Promise<Response | null>;
 
   /**
+   * Get AI chat hooks provided by this plugin
+   * Returns empty object if no hooks
+   */
+  getHooks(): AIChatHooks;
+
+  /**
    * Get plugin help information
    */
   help(): string;
@@ -195,6 +201,7 @@ export interface PluginServices {
   readonly storage: IStorage;
   readonly config: Config;
   readonly pluginManager: IPluginManager;
+  readonly hooks: AIChatHooks;
 }
 
 // ============ Plugin Definition ============
@@ -220,10 +227,13 @@ export interface PluginDefinition {
   readonly help?: string | (() => string);
 
   /**
-   * Event handler (required)
+   * Event handler (optional — hooks-only plugins can omit this)
    * @returns Response if handled, null to skip
    */
-  handle(event: Event, services: PluginServices): Promise<Response | null>;
+  handle?(event: Event, services: PluginServices): Promise<Response | null>;
+
+  /** AI chat hooks — injected into AIChatPlugin's LLM pipeline (optional) */
+  readonly hooks?: AIChatHooks;
 
   /** Called when plugin is loaded (optional) */
   onLoad?(services: PluginServices): Promise<void>;
@@ -284,6 +294,7 @@ export interface IPluginManager {
   dispatch(event: Event): Promise<Response | null>;
   getPlugins(): IPlugin[];
   getPlugin(name: string): IPlugin | undefined;
+  getHooks(): AIChatHooks;
 
   /** Load plugins from directory */
   loadFromDir(dir: string, services: PluginServices): Promise<void>;

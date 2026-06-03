@@ -50,7 +50,12 @@ function createMockServices(): PluginServices {
       dispatch: vi.fn(),
       getPlugins: vi.fn().mockReturnValue([]),
       getPlugin: vi.fn(),
+      getHooks: vi.fn().mockReturnValue({}),
+      loadFromDir: vi.fn(),
+      reloadPlugin: vi.fn(),
+      reloadAll: vi.fn(),
     },
+    hooks: {},
   };
 }
 
@@ -118,21 +123,21 @@ describe("createPlugin", () => {
     ).toThrow("Plugin name is required");
   });
 
-  it("should throw when handle is not a function", () => {
+  it("should throw when handle is not a function and no hooks", () => {
     expect(() =>
       createPlugin({
         name: "test",
         handle: "not a function" as any,
       })
-    ).toThrow("Plugin handle function is required");
+    ).toThrow("Plugin must define handle and/or hooks");
   });
 
-  it("should throw when handle is missing", () => {
+  it("should throw when neither handle nor hooks is defined", () => {
     expect(() =>
       createPlugin({
         name: "test",
       } as any)
-    ).toThrow("Plugin handle function is required");
+    ).toThrow("Plugin must define handle and/or hooks");
   });
 });
 

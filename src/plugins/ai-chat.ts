@@ -53,6 +53,7 @@ class AIChatPluginImpl {
     this.kvStorage = services.storage;
     this.persona = new PersonaService(services.storage);
     this.historyLimit = services.config.context?.historyLimit ?? 10;
+    this.hooks = services.hooks;
 
     // Check for plugin-specific LLM config
     const pluginConfig = services.config.plugins?.ai_chat;

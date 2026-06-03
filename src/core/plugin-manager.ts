@@ -12,6 +12,8 @@ import type {
   PluginServices,
   Event,
   Response,
+  AIChatHooks,
+  LLMMessage,
 } from "../interfaces.js";
 import { PluginLoader } from "./plugin-loader.js";
 import { logger } from "./logger.js";
@@ -163,5 +165,57 @@ export class PluginManager implements IPluginManager {
 
   getPlugin(name: string): IPlugin | undefined {
     return this.plugins.find((p) => p.name === name);
+  }
+
+  /**
+   * Collect hooks from all registered plugins and merge into a single chain.
+   * beforeLLM: plugins run in priority order (ascending), each receives the
+   *   output of the previous.  afterLLM: same chain in reverse.
+   */
+  getHooks(): AIChatHooks {
+    const beforeFns = this.plugins
+      .map((p) => p.getHooks().beforeLLM)
+      .filter((fn): fn is NonNullable<typeof fn> => typeof fn === "function");
+
+    const afterFns = this.plugins
+      .map((p) => p.getHooks().afterLLM)
+      .filter((fn): fn is NonNullable<typeof fn> => typeof fn === "function");
+
+    const hooks: AIChatHooks = {};
+
+    if (beforeFns.length > 0) {
+      hooks.beforeLLM = async (messages: LLMMessage[], event: Event) => {
+        let result = messages;
+        for (const fn of beforeFns) {
+          try {
+            result = await fn(result, event);
+          } catch (error) {
+            logger.error(`[Hooks] beforeLLM failed: ${error}`);
+            // Continue with previous result — don't break the chain
+          }
+        }
+        return result;
+      };
+    }
+
+    if (afterFns.length > 0) {
+      hooks.afterLLM = async (response: string, event: Event) => {
+        let result = response;
+        for (const fn of afterFns) {
+          try {
+            result = await fn(result, event);
+          } catch (error) {
+            logger.error(`[Hooks] afterLLM failed: ${error}`);
+          }
+        }
+        return result;
+      };
+    }
+
+    return hooks;
+  }
+
+  getLoader(): IPluginLoader {
+    return this.loader;
   }
 }

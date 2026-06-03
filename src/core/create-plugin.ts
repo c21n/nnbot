@@ -11,6 +11,7 @@ import type {
   Response,
   PluginServices,
   PluginDefinition,
+  AIChatHooks,
 } from "../interfaces.js";
 
 /**
@@ -26,8 +27,9 @@ export function createPlugin(def: PluginDefinition): IPlugin {
     throw new Error("Plugin name is required");
   }
 
-  if (typeof def.handle !== "function") {
-    throw new Error("Plugin handle function is required");
+  // At least one of handle or hooks must be provided
+  if (typeof def.handle !== "function" && !def.hooks) {
+    throw new Error("Plugin must define handle and/or hooks");
   }
 
   // Internal services reference, set by PluginManager
@@ -84,7 +86,17 @@ export function createPlugin(def: PluginDefinition): IPlugin {
       if (!_services) {
         throw new Error("Plugin not registered");
       }
+      if (!def.handle) {
+        return null;
+      }
       return def.handle(event, _services);
+    },
+
+    /**
+     * Get AI chat hooks
+     */
+    getHooks(): AIChatHooks {
+      return def.hooks ?? {};
     },
   };
 

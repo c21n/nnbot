@@ -16,8 +16,7 @@ import { logger } from "./core/logger.js";
 import { SQLiteStorage } from "./services/storage/sqlite.js";
 import { OpenAICompatibleService } from "./services/llm/openai.js";
 import { OneBotAdapter } from "./utils/onebot.js";
-import { MemoryAdapter } from "./plugins/memory-adapter.js";
-import type { PluginServices } from "./interfaces.js";
+import type { PluginServices, AIChatHooks } from "./interfaces.js";
 
 const PLUGINS_DIR = resolve(import.meta.dirname, "plugins");
 
@@ -48,38 +47,36 @@ async function main() {
   // Test OneBot connection
   const connected = await onebot.testConnection();
   if (!connected) {
-    logger.error("Failed to connect to OneBot", { url: config.onebot.url });
+    logger.error(`Failed to connect to OneBot: ${config.onebot.url}`);
     process.exit(1);
   }
 
   const loginInfo = await onebot.getLoginInfo();
   logger.info(`Connected to OneBot as ${loginInfo.nickname} (${loginInfo.userId})`);
 
-  // Initialize memory adapter (long-term memory via nniaomemory)
-  const memoryAdapter = new MemoryAdapter({
-    enabled: config.plugins.enabled.includes("memory"),
-    siliconflowApiKey: process.env.SILICONFLOW_API_KEY ?? "",
-    deepseekApiKey: process.env.DEEPSEEK_API_KEY ?? "",
-  });
-  await memoryAdapter.initialize();
-
   // Initialize plugin manager
   const pluginManager = new PluginManager();
 
-  // Create plugin services
+  // Create plugin services (hooks populated after plugin load)
+  const hooks: AIChatHooks = {};
   const services: PluginServices = {
     llm,
     storage,
     config,
     pluginManager,
+    hooks,
   };
 
   // Load plugins from directory (auto-discovery)
   await pluginManager.loadFromDir(PLUGINS_DIR, services);
+
+  // Collect hooks from all plugins
+  Object.assign(hooks, pluginManager.getHooks());
+
   logger.info(`Loaded ${pluginManager.getPlugins().length} plugins`);
 
   // Initialize hot reload manager
-  const hotReloadManager = new HotReloadManager(pluginManager, pluginManager.loader, services);
+  const hotReloadManager = new HotReloadManager(pluginManager, pluginManager.getLoader(), services);
   if (process.env.NODE_ENV !== "production") {
     await hotReloadManager.startWatching(PLUGINS_DIR);
     logger.info("Hot reload enabled (development mode)");
@@ -152,7 +149,7 @@ async function main() {
 
       return reply.send({ status: "ok" });
     } catch (error) {
-      logger.error("Error handling event", error);
+      logger.error(`Error handling event: ${error}`);
       return reply.status(500).send({ status: "error" });
     }
   });
@@ -163,7 +160,7 @@ async function main() {
     logger.info(`Bot is running on ${config.server.host}:${config.server.port}`);
     logger.info(`Waiting for events from ${config.onebot.url}`);
   } catch (error) {
-    logger.error("Failed to start server", error);
+    logger.error(`Failed to start server: ${error}`);
     process.exit(1);
   }
 
@@ -173,9 +170,6 @@ async function main() {
 
     // Stop hot reload
     hotReloadManager.stopWatching();
-
-    // Shutdown memory adapter
-    await memoryAdapter.shutdown();
 
     // Unload plugins
     for (const plugin of pluginManager.getPlugins()) {
