@@ -39,5 +39,6 @@
 ## 扩展点
 
 - 新插件: 实现 `IPlugin` → `src/plugins/`
+- LLM 钩子: 实现 `AIChatHooks`（beforeLLM / afterLLM）→ 注入 AIChatPlugin
 - 新 LLM: 实现 `ILLMService` → `src/services/llm/`
 - 新存储: 实现 `IStorage` → `src/services/storage/`
