@@ -7,6 +7,7 @@
 
 import { readdir, stat, mkdir } from "fs/promises";
 import { join, extname, basename } from "path";
+import { pathToFileURL } from "url";
 import type {
   IPlugin,
   PluginServices,
@@ -68,8 +69,11 @@ export class PluginLoader implements IPluginLoader {
     services: PluginServices
   ): Promise<IPlugin | null> {
     try {
+      // Convert to file:// URL for Windows compatibility
+      const fileUrl = pathToFileURL(filePath).href;
+
       // Dynamic import
-      const mod = await import(filePath);
+      const mod = await import(fileUrl);
 
       // Check for default export
       if (!mod.default) {
