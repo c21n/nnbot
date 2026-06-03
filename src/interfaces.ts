@@ -184,6 +184,54 @@ export interface AIChatHooks {
   ) => Promise<string>;
 }
 
+// ============ Plugin Services ============
+
+/**
+ * Services available to plugins via handle(event, services)
+ * Injected by PluginManager, not manually constructed
+ */
+export interface PluginServices {
+  readonly llm: ILLMService;
+  readonly storage: IStorage;
+  readonly config: Config;
+  readonly pluginManager: IPluginManager;
+}
+
+// ============ Plugin Definition ============
+
+/**
+ * Plugin definition passed to createPlugin()
+ * Only name and handle are required
+ */
+export interface PluginDefinition {
+  /** Plugin unique name (required) */
+  readonly name: string;
+
+  /** Plugin description (optional, default: "") */
+  readonly description?: string;
+
+  /** Version string (optional, default: "1.0.0") */
+  readonly version?: string;
+
+  /** Execution priority, lower = earlier (optional, default: 100) */
+  readonly priority?: number;
+
+  /** Help text (optional, default: "") */
+  readonly help?: string;
+
+  /**
+   * Event handler (required)
+   * @returns Response if handled, null to skip
+   */
+  handle(event: Event, services: PluginServices): Promise<Response | null>;
+
+  /** Called when plugin is loaded (optional) */
+  onLoad?(services: PluginServices): Promise<void>;
+
+  /** Called when plugin is unloaded (optional) */
+  onUnload?(): Promise<void>;
+}
+
 // ============ Plugin Manager Interface ============
 
 /**
