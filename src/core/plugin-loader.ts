@@ -94,9 +94,7 @@ export class PluginLoader implements IPluginLoader {
         plugin.setServices(services);
       }
 
-      // Call onLoad
-      await plugin.onLoad();
-
+      // Don't call onLoad here — PluginManager.register() handles lifecycle
       return plugin;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

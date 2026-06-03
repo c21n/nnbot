@@ -304,7 +304,7 @@ describe("PluginLoader", () => {
       expect(plugin).toBeNull();
     });
 
-    it("should return null when onLoad fails", async () => {
+    it("should return plugin even if onLoad would fail (onLoad is PluginManager's responsibility)", async () => {
       // Create a plugin with failing onLoad
       await writeFile(
         join(tempDir, "fail-onload.ts"),
@@ -329,7 +329,9 @@ describe("PluginLoader", () => {
         services
       );
 
-      expect(plugin).toBeNull();
+      // PluginLoader no longer calls onLoad — that's PluginManager.register()'s job
+      expect(plugin).not.toBeNull();
+      expect(plugin!.name).toBe("fail-onload");
     });
   });
 });
