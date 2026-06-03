@@ -11,6 +11,7 @@ import type {
   IPluginManager,
   Config,
   IConversationStorage,
+  PluginServices,
 } from "../interfaces.js";
 import { PersonaService } from "../services/persona.js";
 import { logger } from "../core/logger.js";
@@ -23,14 +24,17 @@ export class AdminPlugin implements IPlugin {
   private commands: Map<string, (event: Event, args: string) => Promise<string>>;
   private personaService: PersonaService | null = null;
   private conversationStorage: IConversationStorage | null = null;
+  private services: PluginServices | null = null;
 
   constructor(
     private pluginManager: IPluginManager,
     private config: Config,
-    kvStorage?: { get: (key: string) => Promise<unknown | null>; set: (key: string, value: unknown) => Promise<void>; delete: (key: string) => Promise<void> }
+    kvStorage?: { get: (key: string) => Promise<unknown | null>; set: (key: string, value: unknown) => Promise<void>; delete: (key: string) => Promise<void> },
+    services?: PluginServices
   ) {
     this.personaService = kvStorage ? new PersonaService(kvStorage) : null;
     this.conversationStorage = kvStorage as IConversationStorage | null;
+    this.services = services ?? null;
 
     this.commands = new Map([
       ["/help", this.cmdHelp.bind(this)],
@@ -40,6 +44,7 @@ export class AdminPlugin implements IPlugin {
       ["/persona", this.cmdPersona.bind(this)],
       ["/persona-set", this.cmdPersonaSet.bind(this)],
       ["/persona-reset", this.cmdPersonaReset.bind(this)],
+      ["/reload", this.cmdReload.bind(this)],
     ]);
   }
 
@@ -102,7 +107,8 @@ export class AdminPlugin implements IPlugin {
 /clear - 清除对话历史
 /persona - 查看当前人格设定
 /persona-set <内容> - 设置人格（用 "|||" 分隔多条）
-/persona-reset - 重置为默认人格`;
+/persona-reset - 重置为默认人格
+/reload [插件名] - 重载插件（无参数重载全部）`;
   }
 
   private isAdmin(userId: string): boolean {
@@ -188,5 +194,28 @@ export class AdminPlugin implements IPlugin {
 
     await this.personaService.resetUserPersona(event.userId);
     return "人格已重置为默认设定";
+  }
+
+  private async cmdReload(_event: Event, args: string): Promise<string> {
+    if (!this.services) {
+      return "服务未初始化，无法重载插件";
+    }
+
+    try {
+      if (args) {
+        // Reload specific plugin
+        const pluginName = args.trim();
+        await this.pluginManager.reloadPlugin(pluginName, this.services);
+        return `插件 "${pluginName}" 重载成功`;
+      } else {
+        // Reload all plugins
+        await this.pluginManager.reloadAll(this.services);
+        const plugins = this.pluginManager.getPlugins();
+        return `所有插件已重载，共 ${plugins.length} 个`;
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return `重载失败: ${message}`;
+    }
   }
 }

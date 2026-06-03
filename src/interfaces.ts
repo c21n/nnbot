@@ -256,6 +256,23 @@ export interface IPluginLoader {
   loadPlugin(filePath: string, services: PluginServices): Promise<IPlugin | null>;
 }
 
+// ============ Hot Reload Interface ============
+
+/**
+ * Hot reload manager interface
+ * Manages file watching and plugin reloading
+ */
+export interface IHotReloadManager {
+  /** Start watching directory for changes */
+  startWatching(dir: string): Promise<void>;
+
+  /** Stop watching */
+  stopWatching(): void;
+
+  /** Check if currently watching */
+  isWatching(): boolean;
+}
+
 // ============ Plugin Manager Interface ============
 
 /**
@@ -270,6 +287,12 @@ export interface IPluginManager {
 
   /** Load plugins from directory */
   loadFromDir(dir: string, services: PluginServices): Promise<void>;
+
+  /** Reload a specific plugin by name */
+  reloadPlugin(name: string, services: PluginServices): Promise<void>;
+
+  /** Reload all plugins */
+  reloadAll(services: PluginServices): Promise<void>;
 }
 
 // ============ Configuration ============
