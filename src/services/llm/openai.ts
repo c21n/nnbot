@@ -129,7 +129,9 @@ export class OpenAICompatibleService implements ILLMService {
       const response = await this.client.get("/models");
       const models = response.data.data ?? response.data;
       return models.map((model: { id: string }) => model.id);
-    } catch {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`\x1b[31m[LLM] Failed to fetch models: ${message}\x1b[0m`);
       return [];
     }
   }
