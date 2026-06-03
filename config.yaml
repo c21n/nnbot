@@ -1,0 +1,68 @@
+# NNBot Configuration
+
+# Server settings
+server:
+  host: "0.0.0.0"
+  port: 8080
+
+# OneBot connection (NapCat/go-cqhttp)
+onebot:
+  url: "http://127.0.0.1:3000"
+  # accessToken: ""  # Optional access token
+
+# LLM configuration (default)
+llm:
+  provider: "openai_compatible"
+  baseUrl: "https://token-plan-cn.example.com/v1"
+  apiKey: "${LLM_API_KEY}"  # 从环境变量读取
+  model: "MiMo-GPT2"
+  temperature: 0.7
+  maxTokens: 1000
+
+# Plugin-specific LLM config (optional)
+# If not set, uses the default LLM above
+# plugins:
+#   ai_chat:
+#     llm:
+#       baseUrl: "https://api.another.com/v1"
+#       apiKey: "another-key"
+#       model: "another-model"
+
+# Context memory configuration
+context:
+  historyLimit: 10  # 保留最近多少条对话作为上下文
+
+# Storage configuration
+storage:
+  type: "sqlite"  # sqlite | memory
+  path: "data/bot.db"
+
+# Plugin configuration
+plugins:
+  enabled:
+    - "ai_chat"
+    - "rule_match"
+    - "admin"
+  disabled: []
+
+# Rules for rule_match plugin
+rules: []
+
+# Admin configuration
+admin:
+  userIds:
+    - "your-qq-id"  # 你的 QQ 号
+  commands:
+    - "/help"
+    - "/plugins"
+    - "/status"
+    - "/clear"
+    - "/persona"
+    - "/persona-set"
+    - "/persona-reset"
+
+# Persona configuration
+persona:
+  default: "你是一个友好的助手。请用简洁、友好的方式回答问题。"
+  # 支持多行，用 | 分隔
+  # default: "你是 NNBot。|你说话简洁友好。|你喜欢用 emoji。"
