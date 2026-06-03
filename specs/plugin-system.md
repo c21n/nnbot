@@ -218,13 +218,13 @@ export default createPlugin({
 
 ## 7. 验收标准
 
-- [ ] createPlugin 工厂函数实现并通过测试
-- [ ] 目录扫描自动加载插件
-- [ ] 按 priority 排序执行
-- [ ] 文件监听热重载
-- [ ] /reload 命令可用
-- [ ] 加载失败跳过 + 日志
-- [ ] 3 个旧插件迁移为新格式
-- [ ] bot.ts 简化为一行加载
-- [ ] 现有 13 个 hooks 测试仍通过
-- [ ] 新增 createPlugin 和 plugin-loader 测试
+- [x] createPlugin 工厂函数实现并通过测试 ✅ Phase 1
+- [x] 目录扫描自动加载插件 ✅ Phase 2
+- [x] 按 priority 排序执行 ✅ Phase 2
+- [x] 文件监听热重载 ✅ Phase 3
+- [x] /reload 命令可用 ✅ Phase 3
+- [x] 加载失败跳过 + 日志 ✅ Phase 2
+- [x] 3 个旧插件迁移为新格式 ✅ Phase 4
+- [x] bot.ts 简化为一行加载 ✅ Phase 4
+- [x] 现有 13 个 hooks 测试仍通过 ✅ Phase 1-4
+- [x] 新增 createPlugin 和 plugin-loader 测试 ✅ Phase 1-4
