@@ -16,6 +16,7 @@ import { OneBotAdapter } from "./utils/onebot.js";
 import { AIChatPlugin } from "./plugins/ai-chat.js";
 import { RuleMatchPlugin } from "./plugins/rule-match.js";
 import { AdminPlugin } from "./plugins/admin.js";
+import { MemoryAdapter } from "./plugins/memory-adapter.js";
 
 async function main() {
   // Load configuration
@@ -51,6 +52,14 @@ async function main() {
   const loginInfo = await onebot.getLoginInfo();
   logger.info(`Connected to OneBot as ${loginInfo.nickname} (${loginInfo.userId})`);
 
+  // Initialize memory adapter (long-term memory via nniaomemory)
+  const memoryAdapter = new MemoryAdapter({
+    enabled: config.plugins.enabled.includes("memory"),
+    siliconflowApiKey: process.env.SILICONFLOW_API_KEY ?? "",
+    deepseekApiKey: process.env.DEEPSEEK_API_KEY ?? "",
+  });
+  await memoryAdapter.initialize();
+
   // Initialize plugin manager
   const pluginManager = new PluginManager();
 
@@ -64,15 +73,9 @@ async function main() {
   }
 
   if (config.plugins.enabled.includes("ai_chat")) {
-    // Hooks are optional — pass {} or omit for no-op behavior.
-    // Example: inject RAG context before LLM call
-    //   hooks: {
-    //     beforeLLM: async (messages, event) => {
-    //       const context = await chromaDB.query(event.message);
-    //       return [...messages, { role: "system", content: context }];
-    //     },
-    //   }
-    await pluginManager.register(new AIChatPlugin(llm, storage, storage, config));
+    await pluginManager.register(
+      new AIChatPlugin(llm, storage, storage, config, memoryAdapter.getHooks())
+    );
   }
 
   // Message buffer for handling multi-part messages
@@ -160,6 +163,9 @@ async function main() {
   // Graceful shutdown
   const shutdown = async () => {
     logger.info("Shutting down...");
+
+    // Shutdown memory adapter
+    await memoryAdapter.shutdown();
 
     // Unload plugins
     for (const plugin of pluginManager.getPlugins()) {

@@ -4,12 +4,11 @@ node_modules/
 # Build output
 dist/
 
-# Database files
-data/*.db
-data/*.db-wal
-data/*.db-shm
+# Database & runtime data
+data/
+pictor/
 
-# Environment variables (敏感信息)
+# Environment variables (sensitive)
 .env
 .env.local
 .env.*.local

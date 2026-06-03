@@ -41,6 +41,7 @@ storage:
 plugins:
   enabled:
     - "ai_chat"
+    - "memory"
     - "rule_match"
     - "admin"
   disabled: []
