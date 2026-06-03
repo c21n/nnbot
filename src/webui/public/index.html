@@ -705,6 +705,40 @@ function collectPersona() {
   return { default: defaultPersona, users };
 }
 
+// ── LLM Presets ──
+const LLM_PRESETS = {
+  'OpenAI': { baseUrl: 'https://api.openai.com/v1', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'] },
+  'DeepSeek': { baseUrl: 'https://api.deepseek.com/v1', models: ['deepseek-chat', 'deepseek-reasoner'] },
+  'SiliconFlow': { baseUrl: 'https://api.siliconflow.cn/v1', models: ['Qwen/Qwen2.5-7B-Instruct', 'deepseek-ai/DeepSeek-V2.5'] },
+  'Moonshot': { baseUrl: 'https://api.moonshot.cn/v1', models: ['moonshot-v1-8k', 'moonshot-v1-32k', 'moonshot-v1-128k'] },
+  'Zhipu': { baseUrl: 'https://open.bigmodel.cn/api/paas/v4', models: ['glm-4', 'glm-4-flash', 'glm-3-turbo'] },
+  'Ollama (本地)': { baseUrl: 'http://localhost:11434/v1', models: ['llama3', 'qwen2', 'deepseek-v2'] },
+};
+
+function applyPreset(providerName, presetName) {
+  const preset = LLM_PRESETS[presetName];
+  if (!preset) return;
+
+  const card = document.querySelector(`.provider-card[data-name="${providerName}"]`);
+  if (!card) return;
+
+  const baseUrlInput = card.querySelector('[data-field="baseUrl"]');
+  if (baseUrlInput) baseUrlInput.value = preset.baseUrl;
+
+  // Update model datalist
+  const datalist = document.getElementById(`models-${providerName}`);
+  if (datalist) {
+    datalist.innerHTML = '';
+    preset.models.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      datalist.appendChild(opt);
+    });
+  }
+
+  toast(`已应用 ${presetName} 预设`, 'success');
+}
+
 // ── LLM Providers ──
 function renderProviders() {
   const providers = config.llm?.providers ?? {};
@@ -739,7 +773,14 @@ function renderProviders() {
         </div>
       </div>
       <div class="field">
-        <label>Base URL</label>
+        <label style="display:flex;align-items:center;gap:8px">
+          Base URL
+          <select onchange="applyPreset('${esc(name)}', this.value); this.value=''"
+                  style="padding:3px 8px;font-size:12px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text-dim)">
+            <option value="">选择预设...</option>
+            ${Object.keys(LLM_PRESETS).map(k => `<option value="${k}">${k}</option>`).join('')}
+          </select>
+        </label>
         <input type="text" data-provider="${esc(name)}" data-field="baseUrl"
                value="${esc(p.baseUrl ?? '')}" placeholder="https://api.openai.com/v1">
       </div>
@@ -772,7 +813,8 @@ function renderProviders() {
         <div class="field">
           <label>Max Tokens</label>
           <input type="number" data-provider="${esc(name)}" data-field="maxTokens"
-                 value="${p.maxTokens ?? 1000}" placeholder="1000">
+                 value="${p.maxTokens ?? ''}" placeholder="留空使用默认值">
+          <div class="field-hint">留空则使用模型默认值</div>
         </div>
       </div>
     `;
@@ -906,7 +948,7 @@ function addProvider() {
     apiKey: '',
     model: '',
     temperature: 0.7,
-    maxTokens: 1000,
+    maxTokens: undefined,
   };
   activeProviderKey = key;
   config.llm.currentProvider = key;
@@ -962,12 +1004,13 @@ function collectProviders() {
   const providers = {};
   document.querySelectorAll('.provider-card').forEach(card => {
     const name = card.dataset.name;
+    const maxTokensVal = card.querySelector('[data-field="maxTokens"]')?.value;
     providers[name] = {
       baseUrl: card.querySelector('[data-field="baseUrl"]')?.value ?? '',
       apiKey: card.querySelector('[data-field="apiKey"]')?.value ?? '',
       model: card.querySelector('[data-field="model"]')?.value ?? '',
       temperature: parseFloat(card.querySelector('[data-field="temperature"]')?.value) || 0.7,
-      maxTokens: parseInt(card.querySelector('[data-field="maxTokens"]')?.value) || 1000,
+      maxTokens: maxTokensVal ? parseInt(maxTokensVal) : undefined,
     };
   });
   return providers;
