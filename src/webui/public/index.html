@@ -302,6 +302,7 @@
     <div class="sidebar-item" data-section="llm">LLM</div>
     <div class="sidebar-item" data-section="storage">Storage</div>
     <div class="sidebar-item" data-section="plugins">Plugins</div>
+    <div class="sidebar-item" data-section="persona">Persona</div>
     <div class="sidebar-item" data-section="admin">Admin</div>
     <div class="sidebar-item" data-section="context">Context</div>
     <div class="sidebar-item" data-section="rules">Rules</div>
@@ -384,6 +385,22 @@
       </div>
     </div>
 
+    <!-- Persona -->
+    <div id="sec-persona" class="section">
+      <h2>🎭 Persona</h2>
+      <div class="field">
+        <label>Default Persona</label>
+        <textarea id="persona.default" rows="6" placeholder="你是一个友好的助手..."></textarea>
+        <div class="field-hint">Bot 的默认人格设定</div>
+      </div>
+      <div class="field" style="margin-top:20px">
+        <label>User Personas</label>
+        <div class="field-hint" style="margin-bottom:12px">为特定用户设置独立人格（优先级高于默认）</div>
+        <div id="persona.users" class="list-editor"></div>
+        <button class="btn-add" onclick="addPersonaUser()">+ 添加用户人格</button>
+      </div>
+    </div>
+
     <!-- Admin -->
     <div id="sec-admin" class="section">
       <h2>🛡️ Admin</h2>
@@ -429,6 +446,7 @@
 <script>
 // ── State ──
 let config = {};
+let persona = { default: '', users: {} };
 let activeProviderKey = '';
 
 // ── Sidebar navigation ──
@@ -444,11 +462,22 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
 // ── Load config ──
 async function loadConfig() {
   try {
-    const res = await fetch('/api/config');
-    const json = await res.json();
-    if (!json.success) throw new Error(json.error);
-    config = json.data;
+    const [configRes, personaRes] = await Promise.all([
+      fetch('/api/config'),
+      fetch('/api/persona'),
+    ]);
+
+    const configJson = await configRes.json();
+    if (!configJson.success) throw new Error(configJson.error);
+    config = configJson.data;
+
+    const personaJson = await personaRes.json();
+    if (personaJson.success) {
+      persona = personaJson.data;
+    }
+
     renderConfig();
+    renderPersona();
     document.getElementById('status').textContent = 'Loaded';
   } catch (e) {
     toast('加载失败: ' + e.message, 'error');
@@ -480,6 +509,53 @@ function renderConfig() {
 function setVal(id, val) {
   const el = document.getElementById(id);
   if (el && val !== undefined) el.value = val;
+}
+
+// ── Persona ──
+function renderPersona() {
+  setVal('persona.default', persona.default);
+
+  const container = document.getElementById('persona.users');
+  container.innerHTML = '';
+
+  const users = persona.users || {};
+  Object.entries(users).forEach(([userId, content]) => {
+    container.appendChild(createPersonaRow(userId, content));
+  });
+}
+
+function createPersonaRow(userId, content) {
+  const row = document.createElement('div');
+  row.className = 'persona-row';
+  row.style.cssText = 'display:flex;flex-direction:column;gap:8px;padding:12px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:8px;margin-bottom:8px';
+  row.innerHTML = `
+    <div style="display:flex;gap:8px;align-items:center">
+      <input type="text" value="${esc(userId)}" placeholder="User ID" style="flex:1;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px">
+      <button class="btn btn-sm btn-danger" onclick="this.parentElement.parentElement.remove()">删除</button>
+    </div>
+    <textarea rows="3" placeholder="人格设定" style="width:100%;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;resize:vertical">${esc(content)}</textarea>
+  `;
+  return row;
+}
+
+function addPersonaUser() {
+  const container = document.getElementById('persona.users');
+  container.appendChild(createPersonaRow('', ''));
+}
+
+function collectPersona() {
+  const defaultPersona = document.getElementById('persona.default')?.value || '';
+
+  const users = {};
+  document.querySelectorAll('#persona.users .persona-row').forEach(row => {
+    const userId = row.querySelector('input')?.value?.trim();
+    const content = row.querySelector('textarea')?.value?.trim();
+    if (userId && content) {
+      users[userId] = content;
+    }
+  });
+
+  return { default: defaultPersona, users };
 }
 
 // ── LLM Providers ──
@@ -874,16 +950,31 @@ async function saveConfig() {
     rules: getRules(),
   };
 
+  const newPersona = collectPersona();
+
   try {
-    const res = await fetch('/api/config', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newConfig),
-    });
-    const json = await res.json();
-    if (!json.success) throw new Error(json.error);
+    const [configRes, personaRes] = await Promise.all([
+      fetch('/api/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newConfig),
+      }),
+      fetch('/api/persona', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newPersona),
+      }),
+    ]);
+
+    const configJson = await configRes.json();
+    if (!configJson.success) throw new Error(configJson.error);
+
+    const personaJson = await personaRes.json();
+    if (!personaJson.success) throw new Error(personaJson.error);
+
     toast('配置已保存', 'success');
     config = newConfig;
+    persona = newPersona;
   } catch (e) {
     toast('保存失败: ' + e.message, 'error');
   }

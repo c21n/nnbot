@@ -1,17 +1,19 @@
 /**
  * Config API — Fastify plugin
  *
- * Provides REST endpoints for reading and writing config.yaml
- * and fetching available models from LLM providers.
+ * Provides REST endpoints for reading and writing config.yaml,
+ * fetching available models from LLM providers,
+ * and managing persona configuration.
  */
 
 import type { FastifyInstance } from "fastify";
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync, writeFileSync, existsSync } from "fs";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import axios from "axios";
 import type { Config } from "../interfaces.js";
 
 const CONFIG_PATH = "config.yaml";
+const PERSONA_PATH = "persona.yaml";
 
 export async function configApi(app: FastifyInstance): Promise<void> {
   /**
@@ -90,6 +92,62 @@ export async function configApi(app: FastifyInstance): Promise<void> {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return reply.send({ success: false, error: message });
+    }
+  });
+
+  /**
+   * GET /api/persona — Read current persona config
+   */
+  app.get("/api/persona", async (_request, reply) => {
+    try {
+      if (!existsSync(PERSONA_PATH)) {
+        return reply.send({
+          success: true,
+          data: { default: "", users: {} },
+        });
+      }
+
+      const content = readFileSync(PERSONA_PATH, "utf-8");
+      const config = parseYaml(content) as { default?: string; users?: Record<string, string> };
+
+      return reply.send({
+        success: true,
+        data: {
+          default: config.default || "",
+          users: config.users || {},
+        },
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return reply.status(500).send({ success: false, error: message });
+    }
+  });
+
+  /**
+   * PUT /api/persona — Save persona config to file
+   */
+  app.put("/api/persona", async (request, reply) => {
+    try {
+      const { default: defaultPersona, users } = request.body as {
+        default?: string;
+        users?: Record<string, string>;
+      };
+
+      const config: Record<string, unknown> = {};
+      if (defaultPersona) {
+        config.default = defaultPersona;
+      }
+      if (users && Object.keys(users).length > 0) {
+        config.users = users;
+      }
+
+      const yaml = stringifyYaml(config, { indent: 2 });
+      writeFileSync(PERSONA_PATH, yaml, "utf-8");
+
+      return reply.send({ success: true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return reply.status(500).send({ success: false, error: message });
     }
   });
 }
