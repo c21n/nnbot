@@ -31,3 +31,7 @@ npm-debug.log*
 # Coverage
 coverage/
 .nyc_output/
+
+# Third-party / embedded repos
+NapCat.Shell.Windows.OneKey/
+astrbot_plugin_livingmemory/
