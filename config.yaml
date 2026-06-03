@@ -13,9 +13,9 @@ onebot:
 # LLM configuration (default)
 llm:
   provider: "openai_compatible"
-  baseUrl: "https://token-plan-cn.example.com/v1"
-  apiKey: "${LLM_API_KEY}"  # 从环境变量读取
-  model: "MiMo-GPT2"
+  baseUrl: "https://api.openai.com/v1"  # Or your custom endpoint
+  apiKey: "${LLM_API_KEY}"  # Read from environment variable
+  model: "gpt-3.5-turbo"
   temperature: 0.7
   maxTokens: 1000
 
@@ -52,7 +52,7 @@ rules: []
 # Admin configuration
 admin:
   userIds:
-    - "your-qq-id"  # 你的 QQ 号
+    - "your-qq-id"  # Your QQ ID
   commands:
     - "/help"
     - "/plugins"

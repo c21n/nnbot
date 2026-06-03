@@ -31,6 +31,9 @@ npm-debug.log*
 coverage/
 .nyc_output/
 
+# Sensitive config
+persona.yaml
+
 # Third-party / embedded repos
 NapCat.Shell.Windows.OneKey/
 astrbot_plugin_livingmemory/
