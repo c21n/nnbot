@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NNBot Settings</title>
+  <style>
+    :root {
+      --bg: #1a1a2e;
+      --surface: #16213e;
+      --surface2: #0f3460;
+      --primary: #e94560;
+      --primary-hover: #ff6b81;
+      --text: #eee;
+      --text-dim: #999;
+      --border: #2a2a4a;
+      --success: #2ecc71;
+      --danger: #e74c3c;
+      --input-bg: #0d1b2a;
+      --input-border: #1b2838;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header h1 { font-size: 20px; font-weight: 600; }
+    .header h1 span { color: var(--primary); }
+
+    /* ── Layout ── */
+    .layout {
+      display: flex;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+      gap: 24px;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 200px;
+      flex-shrink: 0;
+    }
+    .sidebar-item {
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--text-dim);
+      transition: all 0.15s;
+      margin-bottom: 4px;
+    }
+    .sidebar-item:hover { background: var(--surface); color: var(--text); }
+    .sidebar-item.active {
+      background: var(--surface2);
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    /* ── Content ── */
+    .content { flex: 1; min-width: 0; }
+
+    .section {
+      display: none;
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 24px;
+      border: 1px solid var(--border);
+    }
+    .section.active { display: block; }
+
+    .section h2 {
+      font-size: 18px;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Form ── */
+    .field {
+      margin-bottom: 16px;
+    }
+    .field label {
+      display: block;
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+    .field input, .field select, .field textarea {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.15s;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    .field textarea { resize: vertical; min-height: 80px; }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .field-row-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+
+    .field-hint {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    /* ── Buttons ── */
+    .actions {
+      margin-top: 24px;
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+    .btn {
+      padding: 10px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+    }
+    .btn-secondary:hover { background: #1a4a7a; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      color: white;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s;
+      z-index: 1000;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { background: var(--success); }
+    .toast.error { background: var(--danger); }
+
+    /* ── List editor ── */
+    .list-editor { display: flex; flex-direction: column; gap: 8px; }
+    .list-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .list-row input { flex: 1; }
+    .list-row .btn-remove {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--danger);
+      cursor: pointer;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .list-row .btn-remove:hover { background: rgba(231, 76, 60, 0.1); }
+    .btn-add {
+      padding: 8px 16px;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 13px;
+      width: fit-content;
+    }
+    .btn-add:hover { border-color: var(--primary); color: var(--primary); }
+
+    /* ── Rules table ── */
+    .rules-table { width: 100%; }
+    .rule-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 36px;
+      gap: 8px;
+      margin-bottom: 8px;
+      align-items: center;
+    }
+
+    @media (max-width: 768px) {
+      .layout { flex-direction: column; padding: 16px; }
+      .sidebar { width: 100%; display: flex; gap: 4px; overflow-x: auto; }
+      .sidebar-item { white-space: nowrap; }
+      .field-row, .field-row-3 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>⚙️ <span>NNBot</span> Settings</h1>
+  <span id="status" style="font-size:13px;color:var(--text-dim)">Loading...</span>
+</div>
+
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-item active" data-section="server">Server</div>
+    <div class="sidebar-item" data-section="onebot">OneBot</div>
+    <div class="sidebar-item" data-section="llm">LLM</div>
+    <div class="sidebar-item" data-section="storage">Storage</div>
+    <div class="sidebar-item" data-section="plugins">Plugins</div>
+    <div class="sidebar-item" data-section="admin">Admin</div>
+    <div class="sidebar-item" data-section="context">Context</div>
+    <div class="sidebar-item" data-section="rules">Rules</div>
+  </nav>
+
+  <main class="content">
+
+    <!-- Server -->
+    <div id="sec-server" class="section active">
+      <h2>🖥️ Server</h2>
+      <div class="field-row">
+        <div class="field">
+          <label>Host</label>
+          <input id="server.host" type="text" placeholder="0.0.0.0">
+        </div>
+        <div class="field">
+          <label>Port</label>
+          <input id="server.port" type="number" placeholder="8080">
+        </div>
+      </div>
+    </div>
+
+    <!-- OneBot -->
+    <div id="sec-onebot" class="section">
+      <h2>🤖 OneBot</h2>
+      <div class="field">
+        <label>URL</label>
+        <input id="onebot.url" type="text" placeholder="http://127.0.0.1:3000">
+        <div class="field-hint">OneBot 实现的 HTTP 地址</div>
+      </div>
+      <div class="field">
+        <label>Access Token</label>
+        <input id="onebot.accessToken" type="password" placeholder="留空表示无需认证">
+      </div>
+    </div>
+
+    <!-- LLM -->
+    <div id="sec-llm" class="section">
+      <h2>🧠 LLM</h2>
+      <div class="field">
+        <label>Provider</label>
+        <input id="llm.provider" type="text" placeholder="openai_compatible">
+      </div>
+      <div class="field">
+        <label>Base URL</label>
+        <input id="llm.baseUrl" type="text" placeholder="https://api.openai.com/v1">
+      </div>
+      <div class="field">
+        <label>API Key</label>
+        <input id="llm.apiKey" type="password" placeholder="sk-...">
+      </div>
+      <div class="field-row-3">
+        <div class="field">
+          <label>Model</label>
+          <input id="llm.model" type="text" placeholder="gpt-3.5-turbo">
+        </div>
+        <div class="field">
+          <label>Temperature</label>
+          <input id="llm.temperature" type="number" step="0.1" min="0" max="2" placeholder="0.7">
+        </div>
+        <div class="field">
+          <label>Max Tokens</label>
+          <input id="llm.maxTokens" type="number" placeholder="1000">
+        </div>
+      </div>
+    </div>
+
+    <!-- Storage -->
+    <div id="sec-storage" class="section">
+      <h2>💾 Storage</h2>
+      <div class="field-row">
+        <div class="field">
+          <label>Type</label>
+          <select id="storage.type">
+            <option value="sqlite">SQLite</option>
+            <option value="memory">Memory</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Path</label>
+          <input id="storage.path" type="text" placeholder="data/bot.db">
+        </div>
+      </div>
+    </div>
+
+    <!-- Plugins -->
+    <div id="sec-plugins" class="section">
+      <h2>🧩 Plugins</h2>
+      <div class="field">
+        <label>Enabled Plugins</label>
+        <div id="plugins.enabled" class="list-editor"></div>
+        <button class="btn-add" onclick="addListItem('plugins.enabled','')">+ 添加插件</button>
+      </div>
+      <div class="field" style="margin-top:16px">
+        <label>Disabled Plugins</label>
+        <div id="plugins.disabled" class="list-editor"></div>
+        <button class="btn-add" onclick="addListItem('plugins.disabled','')">+ 添加插件</button>
+      </div>
+    </div>
+
+    <!-- Admin -->
+    <div id="sec-admin" class="section">
+      <h2>🛡️ Admin</h2>
+      <div class="field">
+        <label>Admin User IDs</label>
+        <div id="admin.userIds" class="list-editor"></div>
+        <button class="btn-add" onclick="addListItem('admin.userIds','')">+ 添加用户</button>
+      </div>
+      <div class="field" style="margin-top:16px">
+        <label>Commands</label>
+        <div id="admin.commands" class="list-editor"></div>
+        <button class="btn-add" onclick="addListItem('admin.commands','')">+ 添加命令</button>
+      </div>
+    </div>
+
+    <!-- Context -->
+    <div id="sec-context" class="section">
+      <h2>💬 Context</h2>
+      <div class="field">
+        <label>History Limit</label>
+        <input id="context.historyLimit" type="number" placeholder="10">
+        <div class="field-hint">每次对话携带的历史消息轮数</div>
+      </div>
+    </div>
+
+    <!-- Rules -->
+    <div id="sec-rules" class="section">
+      <h2>📋 Rules</h2>
+      <div class="field-hint" style="margin-bottom:12px">正则匹配规则，匹配后自动回复</div>
+      <div id="rules.list" class="rules-table"></div>
+      <button class="btn-add" onclick="addRule()">+ 添加规则</button>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="loadConfig()">重置</button>
+      <button class="btn btn-primary" onclick="saveConfig()">💾 保存</button>
+    </div>
+  </main>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+// ── State ──
+let config = {};
+
+// ── Sidebar navigation ──
+document.querySelectorAll('.sidebar-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    item.classList.add('active');
+    document.getElementById('sec-' + item.dataset.section).classList.add('active');
+  });
+});
+
+// ── Load config ──
+async function loadConfig() {
+  try {
+    const res = await fetch('/api/config');
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error);
+    config = json.data;
+    renderConfig();
+    document.getElementById('status').textContent = 'Loaded';
+  } catch (e) {
+    toast('Failed to load config: ' + e.message, 'error');
+    document.getElementById('status').textContent = 'Error';
+  }
+}
+
+// ── Render config to form ──
+function renderConfig() {
+  // Simple fields
+  setVal('server.host', config.server?.host);
+  setVal('server.port', config.server?.port);
+  setVal('onebot.url', config.onebot?.url);
+  setVal('onebot.accessToken', config.onebot?.accessToken);
+  setVal('llm.provider', config.llm?.provider);
+  setVal('llm.baseUrl', config.llm?.baseUrl);
+  setVal('llm.apiKey', config.llm?.apiKey);
+  setVal('llm.model', config.llm?.model);
+  setVal('llm.temperature', config.llm?.temperature);
+  setVal('llm.maxTokens', config.llm?.maxTokens);
+  setVal('storage.type', config.storage?.type);
+  setVal('storage.path', config.storage?.path);
+  setVal('context.historyLimit', config.context?.historyLimit);
+
+  // List fields
+  renderList('plugins.enabled', config.plugins?.enabled ?? []);
+  renderList('plugins.disabled', config.plugins?.disabled ?? []);
+  renderList('admin.userIds', config.admin?.userIds ?? []);
+  renderList('admin.commands', config.admin?.commands ?? []);
+
+  // Rules
+  renderRules(config.rules ?? []);
+}
+
+function setVal(id, val) {
+  const el = document.getElementById(id);
+  if (el && val !== undefined) el.value = val;
+}
+
+// ── List editor ──
+function renderList(containerId, items) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  items.forEach((item, i) => {
+    container.appendChild(createListRow(containerId, i, item));
+  });
+}
+
+function createListRow(containerId, index, value) {
+  const row = document.createElement('div');
+  row.className = 'list-row';
+  row.innerHTML = `
+    <input type="text" value="${esc(value)}"
+           onchange="updateListItem('${containerId}', ${index}, this.value)">
+    <button class="btn-remove" onclick="removeListItem('${containerId}', ${index})">×</button>
+  `;
+  return row;
+}
+
+function addListItem(containerId, value) {
+  const container = document.getElementById(containerId);
+  const index = container.children.length;
+  container.appendChild(createListRow(containerId, index, value));
+}
+
+function removeListItem(containerId, index) {
+  const container = document.getElementById(containerId);
+  container.children[index]?.remove();
+  // Re-index
+  Array.from(container.children).forEach((row, i) => {
+    const input = row.querySelector('input');
+    const btn = row.querySelector('.btn-remove');
+    if (btn) btn.setAttribute('onclick', `removeListItem('${containerId}', ${i})`);
+    if (input) input.setAttribute('onchange', `updateListItem('${containerId}', ${i}, this.value)`);
+  });
+}
+
+function updateListItem(containerId, index, value) {
+  // No-op, collected on save
+}
+
+function getListValues(containerId) {
+  const container = document.getElementById(containerId);
+  return Array.from(container.querySelectorAll('input')).map(el => el.value).filter(v => v.trim());
+}
+
+// ── Rules editor ──
+function renderRules(rules) {
+  const container = document.getElementById('rules.list');
+  container.innerHTML = '';
+  rules.forEach((rule, i) => {
+    container.appendChild(createRuleRow(i, rule.pattern, rule.reply));
+  });
+}
+
+function createRuleRow(index, pattern, reply) {
+  const row = document.createElement('div');
+  row.className = 'rule-row';
+  row.innerHTML = `
+    <input type="text" placeholder="正则表达式" value="${esc(pattern ?? '')}">
+    <input type="text" placeholder="回复内容" value="${esc(reply ?? '')}">
+    <button class="btn-remove" onclick="removeRule(${index})">×</button>
+  `;
+  return row;
+}
+
+function addRule() {
+  const container = document.getElementById('rules.list');
+  const index = container.children.length;
+  container.appendChild(createRuleRow(index, '', ''));
+}
+
+function removeRule(index) {
+  const container = document.getElementById('rules.list');
+  container.children[index]?.remove();
+  Array.from(container.children).forEach((row, i) => {
+    const btn = row.querySelector('.btn-remove');
+    if (btn) btn.setAttribute('onclick', `removeRule(${i})`);
+  });
+}
+
+function getRules() {
+  const container = document.getElementById('rules.list');
+  const rules = [];
+  container.querySelectorAll('.rule-row').forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    const pattern = inputs[0]?.value?.trim();
+    const reply = inputs[1]?.value?.trim();
+    if (pattern && reply) rules.push({ pattern, reply });
+  });
+  return rules;
+}
+
+// ── Save config ──
+async function saveConfig() {
+  const newConfig = {
+    server: {
+      host: document.getElementById('server.host').value || '0.0.0.0',
+      port: parseInt(document.getElementById('server.port').value) || 8080,
+    },
+    onebot: {
+      url: document.getElementById('onebot.url').value || 'http://127.0.0.1:3000',
+      accessToken: document.getElementById('onebot.accessToken').value || undefined,
+    },
+    llm: {
+      provider: document.getElementById('llm.provider').value || 'openai_compatible',
+      baseUrl: document.getElementById('llm.baseUrl').value || 'https://api.openai.com/v1',
+      apiKey: document.getElementById('llm.apiKey').value || '',
+      model: document.getElementById('llm.model').value || 'gpt-3.5-turbo',
+      temperature: parseFloat(document.getElementById('llm.temperature').value) || 0.7,
+      maxTokens: parseInt(document.getElementById('llm.maxTokens').value) || 1000,
+    },
+    storage: {
+      type: document.getElementById('storage.type').value || 'sqlite',
+      path: document.getElementById('storage.path').value || 'data/bot.db',
+    },
+    plugins: {
+      enabled: getListValues('plugins.enabled'),
+      disabled: getListValues('plugins.disabled'),
+    },
+    admin: {
+      userIds: getListValues('admin.userIds'),
+      commands: getListValues('admin.commands'),
+    },
+    context: {
+      historyLimit: parseInt(document.getElementById('context.historyLimit').value) || 10,
+    },
+    rules: getRules(),
+  };
+
+  try {
+    const res = await fetch('/api/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newConfig),
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error);
+    toast('配置已保存', 'success');
+    config = newConfig;
+  } catch (e) {
+    toast('保存失败: ' + e.message, 'error');
+  }
+}
+
+// ── Toast ──
+function toast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast ' + type + ' show';
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+function esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Init ──
+loadConfig();
+</script>
+</body>
+</html>

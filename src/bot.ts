@@ -7,6 +7,7 @@
 
 import "dotenv/config";
 import Fastify from "fastify";
+import fastifyStatic from "@fastify/static";
 import { resolve } from "path";
 import { ConfigManager } from "./core/config.js";
 import { PluginManager } from "./core/plugin-manager.js";
@@ -16,9 +17,11 @@ import { logger } from "./core/logger.js";
 import { SQLiteStorage } from "./services/storage/sqlite.js";
 import { OpenAICompatibleService } from "./services/llm/openai.js";
 import { OneBotAdapter } from "./utils/onebot.js";
+import { configApi } from "./webui/config-api.js";
 import type { PluginServices, AIChatHooks } from "./interfaces.js";
 
 const PLUGINS_DIR = resolve(import.meta.dirname, "plugins");
+const WEBUI_DIR = resolve(import.meta.dirname, "webui", "public");
 
 async function main() {
   // Load configuration
@@ -108,6 +111,10 @@ async function main() {
 
   // Create Fastify server
   const app = Fastify({ logger: false });
+
+  // WebUI: serve static files and config API
+  await app.register(fastifyStatic, { root: WEBUI_DIR, prefix: "/" });
+  await app.register(configApi);
 
   // Health check endpoint
   app.get("/health", async () => {
