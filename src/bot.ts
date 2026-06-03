@@ -89,7 +89,7 @@ async function main() {
 
   // Message buffer for handling multi-part messages
   const messageBuffer = new MessageBuffer(
-    5000, // Wait 5 seconds for more messages
+    config.context.messageBufferDelay ?? 3000,
     async (userId, nickname, groupId, groupName, combinedMessage) => {
       // Create event and process
       const event = {

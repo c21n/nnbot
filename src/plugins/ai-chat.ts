@@ -6,12 +6,10 @@
  */
 
 import type {
-  IPlugin,
   Event,
   Response,
   ILLMService,
   IConversationStorage,
-  Config,
   AIChatHooks,
   PluginServices,
 } from "../interfaces.js";
@@ -21,11 +19,6 @@ import { createPlugin } from "../core/create-plugin.js";
 import { PLUGIN_PRIORITY } from "../constants.js";
 import { logger } from "../core/logger.js";
 
-const SUMMARY_PROMPT = `请将以下对话压缩成一段简短的摘要，保留关键信息（用户的需求、重要的事实、结论等）。
-摘要应该简洁，不超过100字。
-只输出摘要，不要其他内容。
-
-对话内容：`;
 
 /**
  * AI Chat Plugin implementation
@@ -39,9 +32,8 @@ class AIChatPluginImpl {
 
   private persona!: PersonaService;
   private historyLimit!: number;
-  private kvStorage!: { get: (key: string) => Promise<unknown | null>; set: (key: string, value: unknown) => Promise<void>; delete: (key: string) => Promise<void> };
+  private compressThreshold!: number;
   private llm!: ILLMService;
-  private summaryLlm!: ILLMService;
   private storage!: IConversationStorage;
   private hooks: AIChatHooks = {};
 
@@ -50,9 +42,9 @@ class AIChatPluginImpl {
    */
   async initialize(services: PluginServices): Promise<void> {
     this.storage = services.storage;
-    this.kvStorage = services.storage;
     this.persona = new PersonaService(services.storage);
     this.historyLimit = services.config.context?.historyLimit ?? 10;
+    this.compressThreshold = services.config.context?.summaryCompressThreshold ?? 10;
     this.hooks = services.hooks;
 
     // Check for plugin-specific LLM config
@@ -68,11 +60,9 @@ class AIChatPluginImpl {
           maxTokens: pluginConfig.llm.maxTokens,
         }
       );
-      this.summaryLlm = this.llm;
     } else {
       logger.info("[ai_chat] 使用默认 LLM 配置");
       this.llm = services.llm;
-      this.summaryLlm = services.llm;
     }
   }
 
@@ -101,19 +91,18 @@ class AIChatPluginImpl {
 
       // Compress if needed
       let contextMessages: Array<{ role: "user" | "assistant"; content: string }>;
-      let summary = await this.getSummary(event.userId);
+      let summary = "";
 
-      if (allHistory.length > messageLimit) {
+      // Only compress when excess rounds exceed threshold
+      const excessMessages = allHistory.length - messageLimit;
+      const excessRounds = Math.floor(excessMessages / 2);
+      if (excessRounds >= this.compressThreshold && this.hooks.compressConversation) {
         // Need to compress older messages
-        const oldMessages = allHistory.slice(0, allHistory.length - messageLimit);
-        const newMessages = allHistory.slice(allHistory.length - messageLimit);
+        const oldMessages = allHistory.slice(0, excessMessages);
+        const newMessages = allHistory.slice(excessMessages);
 
-        // Generate summary of old messages
-        const newSummary = await this.generateSummary(oldMessages, summary);
-
-        // Save new summary
-        await this.saveSummary(event.userId, newSummary);
-        summary = newSummary;
+        // Delegate compression to memory system
+        summary = await this.hooks.compressConversation(oldMessages, "");
 
         // Build context with summary + recent messages
         contextMessages = [
@@ -124,8 +113,7 @@ class AIChatPluginImpl {
           })),
         ];
 
-        logger.plugin("ai_chat", `压缩: ${oldMessages.length} 条 → 摘要`);
-        logger.debug(`[摘要] ${summary}`);
+        logger.plugin("ai_chat", `压缩: ${excessRounds} 轮 → 摘要`);
       } else {
         // No compression needed
         contextMessages = allHistory.map((m) => ({
@@ -181,49 +169,6 @@ class AIChatPluginImpl {
    */
   getPersonaService(): PersonaService {
     return this.persona;
-  }
-
-  /**
-   * Get saved summary
-   */
-  private async getSummary(userId: string): Promise<string> {
-    const summary = await this.kvStorage.get(`summary:${userId}`);
-    return (summary as string) || "";
-  }
-
-  /**
-   * Save summary
-   */
-  private async saveSummary(userId: string, summary: string): Promise<void> {
-    await this.kvStorage.set(`summary:${userId}`, summary);
-  }
-
-  /**
-   * Generate summary from old messages
-   */
-  private async generateSummary(
-    messages: Array<{ role: string; content: string }>,
-    existingSummary: string
-  ): Promise<string> {
-    // Format messages for summary
-    const conversationText = messages
-      .map((m) => `${m.role === "user" ? "用户" : "助手"}: ${m.content}`)
-      .join("\n");
-
-    // Include existing summary if available
-    const prompt = existingSummary
-      ? `${SUMMARY_PROMPT}\n之前的摘要: ${existingSummary}\n\n新的对话:\n${conversationText}`
-      : `${SUMMARY_PROMPT}\n${conversationText}`;
-
-    try {
-      const summary = await this.summaryLlm.chat([
-        { role: "user", content: prompt }
-      ]);
-      return summary.trim();
-    } catch (error) {
-      logger.error("生成摘要失败");
-      return existingSummary;
-    }
   }
 
   /**

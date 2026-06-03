@@ -45,6 +45,8 @@ const DEFAULT_CONFIG: Config = {
   },
   context: {
     historyLimit: 10,
+    messageBufferDelay: 3000,
+    summaryCompressThreshold: 10,
   },
 };
 

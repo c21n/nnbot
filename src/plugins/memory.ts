@@ -1,7 +1,7 @@
 /**
  * Memory Plugin
  *
- * Long-term memory via nniaomemory.
+ * Long-term memory via internal memory module.
  * Provides AIChatHooks to inject memories into LLM context
  * and store conversations for memory extraction.
  */
@@ -10,25 +10,22 @@ import { createPlugin } from "../core/create-plugin.js";
 import { PLUGIN_PRIORITY } from "../constants.js";
 import { logger } from "../core/logger.js";
 import type { AIChatHooks, LLMMessage, Event, PluginServices } from "../interfaces.js";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Ctor<T = unknown> = new (...args: any[]) => T;
-
-interface MemoryModule {
-  MemoryPlugin: Ctor;
-  SiliconFlowEmbedding: Ctor;
-  DeepSeekLLM: Ctor;
-  MemoryLock: Ctor;
-  getSqliteConnection: () => unknown;
-  SqliteMessageRepository: Ctor;
-  SqliteSessionRepository: Ctor;
-  SqliteProfileRepository: Ctor;
-  SummaryRepository: Ctor;
-  SqliteUserIndexRepository: Ctor;
-  ChromaMemoryRepository: Ctor;
-  SqliteMemoryRepository: Ctor;
-  ResilientMemoryRepository: Ctor;
-}
+import {
+  MemoryPlugin,
+  SiliconFlowEmbedding,
+  DeepSeekLLM,
+  MemoryLock,
+  getSqliteConnection,
+  SqliteMessageRepository,
+  SqliteSessionRepository,
+  SqliteProfileRepository,
+  SummaryRepository,
+  SqliteUserIndexRepository,
+  ChromaMemoryRepository,
+  SqliteMemoryRepository,
+  ResilientMemoryRepository,
+  setCustomLogger,
+} from "../memory/index.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let plugin: any = null;
@@ -43,7 +40,7 @@ function buildSessionId(event: Event): string {
 
 export default createPlugin({
   name: "memory",
-  description: "Long-term memory via nniaomemory",
+  description: "Long-term memory via internal memory module",
   priority: PLUGIN_PRIORITY.AI_CHAT - 1, // Before ai_chat
 
   async onLoad(services: PluginServices) {
@@ -64,25 +61,26 @@ export default createPlugin({
     }
 
     try {
-      const mod = (await import("nniaomemory")) as unknown as MemoryModule;
+      // Redirect memory module logs through CHATBOT's logger for consistent format
+      setCustomLogger(logger);
 
-      mod.getSqliteConnection();
+      getSqliteConnection();
 
-      const messageRepo = new mod.SqliteMessageRepository();
-      const sessionRepo = new mod.SqliteSessionRepository();
-      const profileRepo = new mod.SqliteProfileRepository();
-      const summaryRepo = new mod.SummaryRepository();
-      const userIndexRepo = new mod.SqliteUserIndexRepository();
+      const messageRepo = new SqliteMessageRepository();
+      const sessionRepo = new SqliteSessionRepository();
+      const profileRepo = new SqliteProfileRepository();
+      const summaryRepo = new SummaryRepository();
+      const userIndexRepo = new SqliteUserIndexRepository();
 
-      const chromaRepo = new mod.ChromaMemoryRepository();
-      const sqliteRepo = new mod.SqliteMemoryRepository();
-      const memoryRepo = new mod.ResilientMemoryRepository(chromaRepo, sqliteRepo);
+      const chromaRepo = new ChromaMemoryRepository();
+      const sqliteRepo = new SqliteMemoryRepository();
+      const memoryRepo = new ResilientMemoryRepository(chromaRepo, sqliteRepo);
 
-      const embeddingProvider = new mod.SiliconFlowEmbedding(siliconflowKey);
-      const llmProvider = new mod.DeepSeekLLM(deepseekKey);
-      const lock = new mod.MemoryLock();
+      const embeddingProvider = new SiliconFlowEmbedding(siliconflowKey);
+      const llmProvider = new DeepSeekLLM(deepseekKey);
+      const lock = new MemoryLock();
 
-      plugin = new mod.MemoryPlugin({
+      plugin = new MemoryPlugin({
         messageRepo,
         memoryRepo,
         summaryRepo,
@@ -162,6 +160,16 @@ export default createPlugin({
       });
 
       return response;
+    },
+
+    compressConversation: async (
+      messages: Array<{ role: string; content: string }>,
+      existingSummary: string
+    ): Promise<string> => {
+      if (!isEnabled || !plugin) {
+        return existingSummary;
+      }
+      return plugin.compressConversation(messages, existingSummary);
     },
   } satisfies AIChatHooks,
 

@@ -188,6 +188,15 @@ export interface AIChatHooks {
     response: string,
     event: Event
   ) => Promise<string>;
+
+  /**
+   * Called when ai-chat needs to compress old messages into a summary.
+   * Returns the summary text.
+   */
+  compressConversation?: (
+    messages: Array<{ role: string; content: string }>,
+    existingSummary: string
+  ) => Promise<string>;
 }
 
 // ============ Plugin Services ============
@@ -403,4 +412,8 @@ export interface Config {
  */
 export interface ContextConfig {
   historyLimit: number;
+  /** 合并消息等待时间（毫秒），默认 3000 */
+  messageBufferDelay?: number;
+  /** 触发摘要压缩的最小多余轮数，默认 10 */
+  summaryCompressThreshold?: number;
 }
