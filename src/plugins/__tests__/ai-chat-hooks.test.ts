@@ -69,12 +69,16 @@ function createConfig(): Config {
     server: { host: "0.0.0.0", port: 8080 },
     onebot: { url: "http://localhost:3000" },
     llm: {
-      provider: "openai",
-      baseUrl: "http://localhost:11434",
-      apiKey: "test",
-      model: "model-a",
-      temperature: 0.7,
-      maxTokens: 1024,
+      currentProvider: "test",
+      providers: {
+        test: {
+          baseUrl: "http://localhost:11434",
+          apiKey: "test",
+          model: "model-a",
+          temperature: 0.7,
+          maxTokens: 1024,
+        },
+      },
     },
     storage: { type: "memory", path: ":memory:" },
     plugins: { enabled: ["ai_chat"], disabled: [] },

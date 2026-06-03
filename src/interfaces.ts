@@ -325,15 +325,22 @@ export interface OneBotConfig {
 }
 
 /**
- * LLM configuration
+ * Single LLM provider configuration
  */
-export interface LLMConfig {
-  provider: string;
+export interface LLMProviderConfig {
   baseUrl: string;
   apiKey: string;
   model: string;
-  temperature: number;
-  maxTokens: number;
+  temperature?: number;
+  maxTokens?: number;
+}
+
+/**
+ * LLM configuration (multi-provider)
+ */
+export interface LLMConfig {
+  currentProvider: string;
+  providers: Record<string, LLMProviderConfig>;
 }
 
 /**

@@ -9,7 +9,7 @@ import "dotenv/config";
 import Fastify from "fastify";
 import fastifyStatic from "@fastify/static";
 import { resolve } from "path";
-import { ConfigManager } from "./core/config.js";
+import { ConfigManager, resolveLLMProvider } from "./core/config.js";
 import { PluginManager } from "./core/plugin-manager.js";
 import { HotReloadManager } from "./core/hot-reload-manager.js";
 import { MessageBuffer } from "./core/message-buffer.js";
@@ -31,17 +31,19 @@ async function main() {
 
   // Initialize services
   const storage = await SQLiteStorage.create(config.storage.path);
+  const llmProvider = resolveLLMProvider(config.llm);
   const llm = new OpenAICompatibleService(
-    config.llm.baseUrl,
-    config.llm.apiKey,
+    llmProvider.baseUrl,
+    llmProvider.apiKey,
     {
-      model: config.llm.model,
-      temperature: config.llm.temperature,
-      maxTokens: config.llm.maxTokens,
+      model: llmProvider.model,
+      temperature: llmProvider.temperature,
+      maxTokens: llmProvider.maxTokens,
     }
   );
 
   // Initialize LLM (fetch available models)
+  logger.info(`Using LLM provider: ${llmProvider.name}`);
   await llm.init();
 
   // Initialize OneBot adapter

@@ -7,7 +7,7 @@
 
 import { readFileSync } from "fs";
 import { parse as parseYaml } from "yaml";
-import type { Config } from "../interfaces.js";
+import type { Config, LLMConfig, LLMProviderConfig } from "../interfaces.js";
 
 const DEFAULT_CONFIG: Config = {
   server: {
@@ -19,12 +19,16 @@ const DEFAULT_CONFIG: Config = {
     accessToken: undefined,
   },
   llm: {
-    provider: "openai_compatible",
-    baseUrl: "https://api.openai.com/v1",
-    apiKey: "",
-    model: "gpt-3.5-turbo",
-    temperature: 0.7,
-    maxTokens: 1000,
+    currentProvider: "default",
+    providers: {
+      default: {
+        baseUrl: "https://api.openai.com/v1",
+        apiKey: "",
+        model: "gpt-3.5-turbo",
+        temperature: 0.7,
+        maxTokens: 1000,
+      },
+    },
   },
   storage: {
     type: "sqlite",
@@ -81,12 +85,43 @@ export class ConfigManager {
     return {
       server: { ...defaults.server, ...overrides.server },
       onebot: { ...defaults.onebot, ...overrides.onebot },
-      llm: { ...defaults.llm, ...overrides.llm },
+      llm: this.mergeLlmConfig(defaults.llm, overrides.llm),
       storage: { ...defaults.storage, ...overrides.storage },
       plugins: { ...defaults.plugins, ...overrides.plugins },
       rules: overrides.rules ?? defaults.rules,
       admin: { ...defaults.admin, ...overrides.admin },
       context: { ...defaults.context, ...overrides.context },
+    };
+  }
+
+  /**
+   * Merge LLM config with backward compatibility.
+   * Old flat format ({ baseUrl, apiKey, model }) is migrated to multi-provider format.
+   */
+  private mergeLlmConfig(defaults: LLMConfig, overrides?: Partial<LLMConfig>): LLMConfig {
+    if (!overrides) return defaults;
+
+    // Backward compat: old flat format has baseUrl but no providers
+    if ("baseUrl" in overrides && !("providers" in overrides)) {
+      const old = overrides as Record<string, unknown>;
+      return {
+        currentProvider: "default",
+        providers: {
+          default: {
+            baseUrl: (old.baseUrl as string) ?? defaults.providers.default.baseUrl,
+            apiKey: (old.apiKey as string) ?? defaults.providers.default.apiKey,
+            model: (old.model as string) ?? defaults.providers.default.model,
+            temperature: (old.temperature as number) ?? defaults.providers.default.temperature,
+            maxTokens: (old.maxTokens as number) ?? defaults.providers.default.maxTokens,
+          },
+        },
+      };
+    }
+
+    // New multi-provider format
+    return {
+      currentProvider: overrides.currentProvider ?? defaults.currentProvider,
+      providers: { ...defaults.providers, ...overrides.providers },
     };
   }
 
@@ -99,16 +134,37 @@ export class ConfigManager {
       return value;
     };
 
+    // Substitute env vars in all LLM providers
+    const providers: Record<string, typeof config.llm.providers[string]> = {};
+    for (const [name, provider] of Object.entries(config.llm.providers)) {
+      providers[name] = {
+        ...provider,
+        apiKey: substitute(provider.apiKey) as string,
+      };
+    }
+
     return {
       ...config,
-      llm: {
-        ...config.llm,
-        apiKey: substitute(config.llm.apiKey) as string,
-      },
+      llm: { ...config.llm, providers },
       onebot: {
         ...config.onebot,
         accessToken: substitute(config.onebot.accessToken) as string | undefined,
       },
     };
   }
+}
+
+/**
+ * Resolve the active LLM provider config.
+ * Throws if currentProvider is not found in providers.
+ */
+export function resolveLLMProvider(llm: LLMConfig): LLMProviderConfig & { name: string } {
+  const provider = llm.providers[llm.currentProvider];
+  if (!provider) {
+    const available = Object.keys(llm.providers).join(", ");
+    throw new Error(
+      `LLM provider "${llm.currentProvider}" not found. Available: ${available}`
+    );
+  }
+  return { name: llm.currentProvider, ...provider };
 }

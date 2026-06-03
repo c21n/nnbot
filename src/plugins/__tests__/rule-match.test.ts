@@ -29,7 +29,7 @@ function createMockConfig(rules: Array<{ pattern: string; reply: string }> = [])
     rules,
     server: { host: "0.0.0.0", port: 8080 },
     onebot: { url: "http://127.0.0.1:3000" },
-    llm: { provider: "openai", baseUrl: "", apiKey: "", model: "", temperature: 0.7, maxTokens: 1000 },
+    llm: { currentProvider: "default", providers: { default: { baseUrl: "", apiKey: "", model: "" } } },
     storage: { type: "memory", path: "" },
     plugins: { enabled: [], disabled: [] },
     admin: { userIds: [], commands: [] },
