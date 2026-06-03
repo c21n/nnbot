@@ -6,11 +6,8 @@
  */
 
 import type {
-  IPlugin,
   Event,
   Response,
-  IPluginManager,
-  Config,
   IConversationStorage,
   PluginServices,
 } from "../interfaces.js";
@@ -118,11 +115,11 @@ class AdminPluginImpl {
   }
 
   private isAdmin(userId: string): boolean {
-    return this.config.admin.userIds.includes(userId);
+    return this.services.config.admin.userIds.includes(userId);
   }
 
   private async cmdHelp(_event: Event): Promise<string> {
-    const plugins = this.pluginManager.getPlugins();
+    const plugins = this.services.pluginManager.getPlugins();
     const helpText = plugins
       .map((p) => `【${p.name}】${p.help()}`)
       .join("\n\n");
@@ -130,7 +127,7 @@ class AdminPluginImpl {
   }
 
   private async cmdPlugins(_event: Event): Promise<string> {
-    const plugins = this.pluginManager.getPlugins();
+    const plugins = this.services.pluginManager.getPlugins();
     if (plugins.length === 0) {
       return "没有已加载的插件";
     }
@@ -142,7 +139,7 @@ class AdminPluginImpl {
   }
 
   private async cmdStatus(_event: Event): Promise<string> {
-    const plugins = this.pluginManager.getPlugins();
+    const plugins = this.services.pluginManager.getPlugins();
     const uptime = process.uptime();
     const hours = Math.floor(uptime / 3600);
     const minutes = Math.floor((uptime % 3600) / 60);
