@@ -10,7 +10,7 @@ import type { Event, Response, OneBotConfig, EventType } from "../interfaces.js"
 export class OneBotAdapter {
   private client: AxiosInstance;
 
-  constructor(private config: OneBotConfig) {
+  constructor(config: OneBotConfig) {
     this.client = axios.create({
       baseURL: config.url,
       headers: {
@@ -48,9 +48,9 @@ export class OneBotAdapter {
       message = data.message;
     } else if (Array.isArray(data.message)) {
       // Extract text from message segments
-      message = data.message
-        .filter((seg: Record<string, unknown>) => seg.type === "text")
-        .map((seg: Record<string, unknown>) => seg.data?.text ?? "")
+      message = (data.message as Array<Record<string, unknown>>)
+        .filter((seg) => seg.type === "text")
+        .map((seg) => ((seg.data as Record<string, unknown>)?.text as string) ?? "")
         .join("");
     }
 
