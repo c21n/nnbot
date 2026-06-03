@@ -8,12 +8,39 @@
 import type {
   IPlugin,
   IPluginManager,
+  IPluginLoader,
+  PluginServices,
   Event,
   Response,
 } from "../interfaces.js";
+import { PluginLoader } from "./plugin-loader.js";
 
 export class PluginManager implements IPluginManager {
   private plugins: IPlugin[] = [];
+  private loader: IPluginLoader;
+
+  constructor(loader?: IPluginLoader) {
+    this.loader = loader ?? new PluginLoader();
+  }
+
+  /**
+   * Load plugins from directory and register them
+   *
+   * @param dir - Absolute path to plugins directory
+   * @param services - Services to inject into plugins
+   */
+  async loadFromDir(dir: string, services: PluginServices): Promise<void> {
+    const plugins = await this.loader.loadFromDir(dir, services);
+
+    for (const plugin of plugins) {
+      try {
+        await this.register(plugin);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`\x1b[31m[PluginManager] Failed to register "${plugin.name}": ${msg}\x1b[0m`);
+      }
+    }
+  }
 
   async register(plugin: IPlugin): Promise<void> {
     // Check for duplicate names

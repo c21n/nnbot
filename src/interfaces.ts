@@ -232,6 +232,30 @@ export interface PluginDefinition {
   onUnload?(): Promise<void>;
 }
 
+// ============ Plugin Loader Interface ============
+
+/**
+ * Plugin loader interface
+ * Handles directory scanning and dynamic import
+ */
+export interface IPluginLoader {
+  /**
+   * Load all plugins from a directory
+   * @param dir - Absolute path to plugins directory
+   * @param services - Services to inject into plugins
+   * @returns Array of loaded plugins (sorted by priority)
+   */
+  loadFromDir(dir: string, services: PluginServices): Promise<IPlugin[]>;
+
+  /**
+   * Load a single plugin file
+   * @param filePath - Absolute path to plugin file
+   * @param services - Services to inject
+   * @returns Loaded plugin or null if failed
+   */
+  loadPlugin(filePath: string, services: PluginServices): Promise<IPlugin | null>;
+}
+
 // ============ Plugin Manager Interface ============
 
 /**
@@ -243,6 +267,9 @@ export interface IPluginManager {
   dispatch(event: Event): Promise<Response | null>;
   getPlugins(): IPlugin[];
   getPlugin(name: string): IPlugin | undefined;
+
+  /** Load plugins from directory */
+  loadFromDir(dir: string, services: PluginServices): Promise<void>;
 }
 
 // ============ Configuration ============
