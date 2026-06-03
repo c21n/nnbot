@@ -34,8 +34,10 @@ npm-debug.log*
 coverage/
 .nyc_output/
 
-# Tests
+# Tests & specs
 tests/
+specs/
+src/**/__tests__/
 
 # Sensitive config
 persona.yaml
