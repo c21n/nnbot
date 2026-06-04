@@ -34,7 +34,7 @@ export class SearchService {
     // 2. Get query embedding
     const queryEmbedding = await this.embeddingProvider.embed(query)
 
-    // 3. Query memories from ChromaDB
+    // 3. Query memories from vector store
     const rawResults = await this.memoryRepo.query({
       embedding: queryEmbedding,
       userId,

@@ -222,7 +222,7 @@ export class MemoryPlugin {
    * Clear all memories for user
    */
   async clearAll(userId: string): Promise<void> {
-    // Delete all memories from ChromaDB
+    // Delete all memories from vector store
     await this.memoryRepo.deleteByUser(userId)
     // Clear user profile
     await this.profileService.updateProfile(userId, [])

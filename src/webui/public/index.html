@@ -518,10 +518,6 @@
 
         <h3 style="font-size:15px;margin:20px 0 16px;color:var(--text-dim)">Storage Services</h3>
         <div class="field">
-          <label>ChromaDB URL</label>
-          <input id="memory.chromadb.url" type="text" placeholder="http://localhost:8000">
-        </div>
-        <div class="field">
           <label>Redis URL</label>
           <input id="memory.redis.url" type="text" placeholder="redis://localhost:6379">
           <div class="field-hint">可选，用于缓存锁</div>
@@ -799,7 +795,6 @@ function renderMemory() {
   setVal('memory.embedding.model', mem?.embedding?.model);
   setVal('memory.embedding.dimension', mem?.embedding?.dimension);
   setVal('memory.llm.apiKey', mem?.llm?.apiKey);
-  setVal('memory.chromadb.url', mem?.chromadb?.url);
   setVal('memory.redis.url', mem?.redis?.url);
   setVal('memory.sqlite.path', mem?.sqlite?.path);
   setVal('memory.search.maxMemories', mem?.search?.maxMemories);
@@ -830,9 +825,6 @@ function collectMemory() {
     llm: document.getElementById('memory.llm.apiKey')?.value ? {
       apiKey: document.getElementById('memory.llm.apiKey').value,
     } : undefined,
-    chromadb: {
-      url: document.getElementById('memory.chromadb.url')?.value || 'http://localhost:8000',
-    },
     redis: document.getElementById('memory.redis.url')?.value ? {
       url: document.getElementById('memory.redis.url').value,
     } : undefined,

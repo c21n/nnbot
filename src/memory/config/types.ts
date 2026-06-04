@@ -8,10 +8,6 @@ export interface RedisConfig {
   url: string
 }
 
-export interface ChromaConfig {
-  url: string
-}
-
 export interface SqliteConfig {
   path: string
 }
@@ -39,7 +35,6 @@ export interface LifecycleConfig {
 export interface AppConfig {
   embedding: EmbeddingConfig
   redis: RedisConfig
-  chromadb: ChromaConfig
   sqlite: SqliteConfig
   search: SearchConfig
   lifecycle: LifecycleConfig

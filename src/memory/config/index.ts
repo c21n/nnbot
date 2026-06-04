@@ -12,9 +12,6 @@ export const config: AppConfig = {
   redis: {
     url: process.env.REDIS_URL || 'redis://localhost:6379'
   },
-  chromadb: {
-    url: process.env.CHROMADB_URL || 'http://localhost:8000'
-  },
   sqlite: {
     path: process.env.SQLITE_PATH || './data/memory.db'
   },

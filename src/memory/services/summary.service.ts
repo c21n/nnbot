@@ -55,7 +55,7 @@ export class SummaryService {
       // 3. Generate embedding
       const embedding = await this.embedding.embed(summary.text)
 
-      // 4. Save to ChromaDB
+      // 4. Save to vector store
       await this.memoryRepo.save({
         id: generateId(),
         text: summary.text,

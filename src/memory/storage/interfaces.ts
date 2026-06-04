@@ -3,7 +3,7 @@ import { Memory, Message, Session, UserProfile, SearchResult, ProfileValue } fro
 // Re-export ProfileValue for convenience
 export type { ProfileValue }
 
-// ChromaDB where clause
+// Where clause for filtering
 export interface WhereClause {
   [key: string]: string | number | boolean | {
     $eq?: string | number | boolean

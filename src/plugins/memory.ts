@@ -21,9 +21,7 @@ import {
   SqliteProfileRepository,
   SummaryRepository,
   SqliteUserIndexRepository,
-  ChromaMemoryRepository,
-  SqliteMemoryRepository,
-  ResilientMemoryRepository,
+  VectraMemoryRepository,
   setCustomLogger,
 } from "../memory/index.js";
 
@@ -76,9 +74,6 @@ export default createPlugin({
       setCustomLogger(logger);
 
       // Apply config overrides
-      if (memoryConfig.chromadb?.url) {
-        process.env.CHROMADB_URL = memoryConfig.chromadb.url;
-      }
       if (memoryConfig.sqlite?.path) {
         process.env.SQLITE_PATH = memoryConfig.sqlite.path;
       }
@@ -94,9 +89,7 @@ export default createPlugin({
       const summaryRepo = new SummaryRepository();
       const userIndexRepo = new SqliteUserIndexRepository();
 
-      const chromaRepo = new ChromaMemoryRepository();
-      const sqliteRepo = new SqliteMemoryRepository();
-      const memoryRepo = new ResilientMemoryRepository(chromaRepo, sqliteRepo);
+      const memoryRepo = new VectraMemoryRepository();
 
       const embeddingProvider = new SiliconFlowEmbedding(siliconflowKey);
       const llmProvider = new DeepSeekLLM(deepseekKey);

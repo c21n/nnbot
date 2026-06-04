@@ -37,7 +37,17 @@ context:
   historyLimit: 10
 rules: []
 memory:
-  enabled: false
+  enabled: true
+  embedding:
+    apiKey: ${SILICONFLOW_API_KEY}
+  sqlite:
+    path: ./data/memory.db
+  search:
+    maxMemories: 5
+    minScore: 0.3
+  lifecycle:
+    maxMemoriesPerUser: 500
+    summaryTriggerRounds: 15
 tools:
   search:
     enabled: true

@@ -442,9 +442,6 @@ export interface MemoryConfig {
   llm?: {
     apiKey: string;
   };
-  chromadb?: {
-    url: string;
-  };
   redis?: {
     url: string;
   };

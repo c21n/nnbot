@@ -17,7 +17,7 @@ export default createPlugin({
 - **极简插件 API** - `createPlugin` 工厂函数，零样板代码
 - **服务注入** - LLM、存储、配置自动注入，无需手动获取
 - **热重载** - 修改插件自动生效，无需重启
-- **记忆系统** - ChromaDB 向量检索 + SQLite 持久化
+- **记忆系统** - Vectra 向量检索 + SQLite 持久化
 - **消息合并** - 智能合并连续消息，减少 LLM 调用
 - **摘要压缩** - 自动压缩长对话历史，节省 token
 
@@ -320,7 +320,7 @@ nnbot/
 │   │   └── llm/
 │   │       └── openai.ts      # OpenAI 兼容 LLM 服务
 │   └── memory/                # 记忆系统模块
-│       ├── storage/           # 存储层（SQLite + ChromaDB）
+│       ├── storage/           # 存储层（SQLite + Vectra）
 │       ├── services/          # 业务服务
 │       └── providers/         # Embedding/LLM 提供者
 ├── config.yaml                # 配置文件
