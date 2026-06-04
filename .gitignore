@@ -45,3 +45,9 @@ persona.yaml
 # Third-party / embedded repos
 NapCat.Shell.Windows.OneKey/
 astrbot_plugin_livingmemory/
+
+# Dev files
+CLAUDE.md
+.npmignore
+config.example.yaml
+.env.example
