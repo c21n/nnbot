@@ -49,6 +49,15 @@ function openDb(): Database.Database | null {
   return db;
 }
 
+function openDbWritable(): Database.Database | null {
+  const dbPath = resolveDbPath();
+  if (!existsSync(dbPath)) return null;
+
+  const db = new Database(dbPath);
+  db.pragma("journal_mode=WAL");
+  return db;
+}
+
 function toDate(ts: number): string {
   if (!ts) return "-";
   return new Date(ts).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
@@ -300,7 +309,7 @@ export async function memoryApi(app: FastifyInstance): Promise<void> {
   app.delete("/api/memory/:id", async (request, reply) => {
     const { id } = request.params as { id: string };
 
-    const db = openDb();
+    const db = openDbWritable();
     if (!db) {
       return reply.status(404).send(fail("Memory database not found"));
     }
@@ -328,7 +337,7 @@ export async function memoryApi(app: FastifyInstance): Promise<void> {
       return reply.status(400).send(fail("userId is required"));
     }
 
-    const db = openDb();
+    const db = openDbWritable();
     if (!db) {
       return reply.status(404).send(fail("Memory database not found"));
     }
