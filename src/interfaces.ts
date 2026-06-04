@@ -467,8 +467,10 @@ export interface MemoryConfig {
 export interface ToolsConfig {
   search?: {
     provider: string;
-    apiKey: string;
+    apiKey?: string;
     defaultLimit?: number;
+    region?: string;
+    fallback?: string;
   };
 }
 

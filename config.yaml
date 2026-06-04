@@ -39,6 +39,18 @@ rules: []
 # 搜索工具配置（可选）
 # tools:
 #   search:
-#     provider: serpapi
-#     apiKey: ${SERPAPI_API_KEY}
+#     # 搜索源：serpapi, bing, google, tavily, duckduckgo, brave
+#     provider: duckduckgo  # 无需 API key，开箱即用
+#     # provider: serpapi   # 需要 API key
+#     # apiKey: ${SERPAPI_API_KEY}
 #     defaultLimit: 5
+#     region: cn            # 搜索区域（可选）
+#     fallback: duckduckgo  # 备用搜索源（可选）
+
+# 搜索源 API Key（按需配置）
+# SERPAPI_API_KEY=xxx       # https://serpapi.com
+# BING_API_KEY=xxx          # https://portal.azure.com
+# GOOGLE_API_KEY=xxx        # https://console.cloud.google.com
+# GOOGLE_CX=xxx             # Google Custom Search Engine ID
+# TAVILY_API_KEY=xxx        # https://tavily.com
+# BRAVE_API_KEY=xxx         # https://brave.com/search/api

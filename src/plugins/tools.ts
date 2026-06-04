@@ -19,11 +19,15 @@ export default createPlugin({
   description: "内置工具注册插件",
 
   async onLoad(services) {
+    const searchConfig = services.config.tools?.search;
     const tools = [
       new CalculatorTool(),
       new WebSearchTool({
-        apiKey: services.config.tools?.search?.apiKey ?? process.env.SERPAPI_API_KEY ?? "",
-        defaultLimit: services.config.tools?.search?.defaultLimit ?? 5,
+        provider: (searchConfig?.provider as any) ?? "serpapi",
+        apiKey: searchConfig?.apiKey ?? process.env.SERPAPI_API_KEY,
+        defaultLimit: searchConfig?.defaultLimit ?? 5,
+        region: searchConfig?.region,
+        fallback: searchConfig?.fallback as any,
       }),
     ];
 
