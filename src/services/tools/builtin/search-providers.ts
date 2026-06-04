@@ -232,7 +232,17 @@ class DuckDuckGoProvider implements ISearchProvider {
   readonly requiresApiKey = false;
 
   async search(options: SearchOptions): Promise<SearchResult[]> {
-    // DuckDuckGo Instant Answer API (limited but free)
+    // Try HTML search first (more reliable results)
+    try {
+      const results = await this.scrapeSearch(options);
+      if (results.length > 0) {
+        return results;
+      }
+    } catch {
+      // Fall through to Instant Answer API
+    }
+
+    // Fallback: DuckDuckGo Instant Answer API
     const params = new URLSearchParams({
       q: options.query,
       format: "json",
@@ -275,25 +285,24 @@ class DuckDuckGoProvider implements ISearchProvider {
       }
     }
 
-    // If no results, try with HTML scraping fallback
-    if (results.length === 0) {
-      return this.scrapeSearch(options);
-    }
-
     return results.slice(0, options.limit);
   }
 
   private async scrapeSearch(options: SearchOptions): Promise<SearchResult[]> {
-    // Fallback: use DuckDuckGo HTML search
+    // Use DuckDuckGo HTML search
     const params = new URLSearchParams({
       q: options.query,
+      t: "h_",
+      ia: "web",
     });
 
     const response = await fetch(
       `https://html.duckduckgo.com/html/?${params}`,
       {
         headers: {
-          "User-Agent": "Mozilla/5.0 (compatible; nnbot/1.0)",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9",
         },
         signal: AbortSignal.timeout(options.timeout),
       }
@@ -306,17 +315,21 @@ class DuckDuckGoProvider implements ISearchProvider {
     const html = await response.text();
     const results: SearchResult[] = [];
 
-    // Simple regex parsing (not ideal but works for basic cases)
-    const resultRegex = /<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>([^<]+)<\/a>[\s\S]*?<a[^>]+class="result__snippet"[^>]*>([^<]+)<\/a>/g;
+    // Parse DuckDuckGo HTML results
+    const resultRegex = /<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>(.*?)<\/a>[\s\S]*?<a[^>]+class="result__snippet"[^>]*>(.*?)<\/a>/g;
     let match;
 
     while ((match = resultRegex.exec(html)) !== null && results.length < options.limit) {
-      results.push({
-        title: this.decodeHtml(match[2]),
-        snippet: this.decodeHtml(match[3]),
-        url: match[1],
-        source: "duckduckgo",
-      });
+      const title = match[2].replace(/<[^>]+>/g, "").trim();
+      const snippet = match[3].replace(/<[^>]+>/g, "").trim();
+      if (title && snippet) {
+        results.push({
+          title: this.decodeHtml(title),
+          snippet: this.decodeHtml(snippet),
+          url: match[1],
+          source: "duckduckgo",
+        });
+      }
     }
 
     return results;
@@ -328,7 +341,9 @@ class DuckDuckGoProvider implements ISearchProvider {
       .replace(/&lt;/g, "<")
       .replace(/&gt;/g, ">")
       .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'");
+      .replace(/&#39;/g, "'")
+      .replace(/&#x27;/g, "'")
+      .replace(/&#x2F;/g, "/");
   }
 }
 

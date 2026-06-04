@@ -19,6 +19,9 @@ export default createPlugin({
   name: "tools",
   description: "内置工具注册插件",
 
+  // hooks 是必需的，添加空对象以满足 createPlugin 要求
+  hooks: {},
+
   async onLoad(services) {
     const tools: ITool[] = [new CalculatorTool()];
 

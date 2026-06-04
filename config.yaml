@@ -8,7 +8,7 @@ llm:
   providers:
     ds:
       baseUrl: https://api.deepseek.com/v1
-      apiKey: ${DEEPSEEK_API_KEY}
+      apiKey: ${LLM_DS_API_KEY}
       model: deepseek-v4-pro
       temperature: 0.7
 storage:
@@ -20,10 +20,11 @@ plugins:
     - memory
     - rule_match
     - admin
+    - tools
   disabled: []
 admin:
   userIds:
-    - your-qq-id
+    - "2310410026"
   commands:
     - /help
     - /plugins
@@ -35,26 +36,10 @@ admin:
 context:
   historyLimit: 10
 rules: []
-
-# 搜索工具配置（可选）
-# tools:
-#   search:
-#     # 搜索源（推荐免费选项）：
-#     #   duckduckgo - 免费，无限，无需 API key
-#     #   you        - 免费，100次/天，无需 API key
-#     #   brave      - $5/月免费，约 1000 次，质量最高
-#     #   tavily     - 1000次/月，AI 优化
-#     #   exa        - 1000次/月，语义搜索
-#     #   serpapi    - 100次/月，Google 搜索
-#     provider: duckduckgo  # 默认使用免费搜索源
-#     # apiKey: ${BRAVE_API_KEY}  # 按需配置
-#     defaultLimit: 5
-#     region: cn            # 搜索区域（可选）
-#     fallback: duckduckgo  # 备用搜索源（可选）
-
-# 搜索源 API Key（按需配置，不需要的可以删除）
-# SERPAPI_API_KEY=xxx       # https://serpapi.com
-# TAVILY_API_KEY=xxx        # https://tavily.com
-# BRAVE_API_KEY=xxx         # https://brave.com/search/api
-# EXA_API_KEY=xxx           # https://exa.ai
-# YOU_API_KEY=xxx           # https://you.com/platform（可选）
+memory:
+  enabled: false
+tools:
+  search:
+    enabled: true
+    provider: you
+    fallback: duckduckgo
