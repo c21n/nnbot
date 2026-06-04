@@ -16,7 +16,9 @@ export type SearchProvider =
   | "google"
   | "tavily"
   | "duckduckgo"
-  | "brave";
+  | "brave"
+  | "you"
+  | "exa";
 
 export interface SearchResult {
   title: string;
@@ -373,6 +375,108 @@ class BraveProvider implements ISearchProvider {
   }
 }
 
+/**
+ * You.com Search API
+ * Free tier: 100 searches/day (no API key needed for MCP mode)
+ */
+class YouProvider implements ISearchProvider {
+  readonly name = "you" as const;
+  readonly requiresApiKey = false;
+
+  constructor(private apiKey?: string) {}
+
+  async search(options: SearchOptions): Promise<SearchResult[]> {
+    // Use You.com Smart Search API (free tier)
+    const params = new URLSearchParams({
+      query: options.query,
+      num_web_results: String(options.limit),
+    });
+
+    if (options.language !== "auto") {
+      params.set("search_lang", options.language);
+    }
+
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+    };
+
+    // API key is optional for free tier
+    if (this.apiKey) {
+      headers["X-API-Key"] = this.apiKey;
+    }
+
+    const response = await fetch(
+      `https://api.you.com/search?${params}`,
+      {
+        headers,
+        signal: AbortSignal.timeout(options.timeout),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`You.com API error: ${response.status}`);
+    }
+
+    const data = (await response.json()) as any;
+    const results = data.hits ?? [];
+
+    return results.slice(0, options.limit).map((item: any) => ({
+      title: item.title ?? "",
+      snippet: item.snippet ?? item.description ?? "",
+      url: item.url ?? "",
+      source: "you",
+    }));
+  }
+}
+
+/**
+ * Exa.ai Search API
+ * Free tier: 1,000 requests/month
+ * Semantic search based on embeddings
+ */
+class ExaProvider implements ISearchProvider {
+  readonly name = "exa" as const;
+  readonly requiresApiKey = true;
+
+  constructor(private apiKey: string) {}
+
+  async search(options: SearchOptions): Promise<SearchResult[]> {
+    const response = await fetch(
+      "https://api.exa.ai/search",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": this.apiKey,
+        },
+        body: JSON.stringify({
+          query: options.query,
+          numResults: options.limit,
+          type: "neural", // Use semantic search
+          contents: {
+            text: true,
+          },
+        }),
+        signal: AbortSignal.timeout(options.timeout),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Exa API error: ${response.status}`);
+    }
+
+    const data = (await response.json()) as any;
+    const results = data.results ?? [];
+
+    return results.slice(0, options.limit).map((item: any) => ({
+      title: item.title ?? "",
+      snippet: item.text ?? "",
+      url: item.url ?? "",
+      source: "exa",
+    }));
+  }
+}
+
 // ============ Provider Factory ============
 
 export class SearchProviderFactory {
@@ -393,13 +497,13 @@ export class SearchProviderFactory {
       );
     }
 
-    // Bing
+    // Bing (deprecated but keep for existing users)
     const bingKey = process.env.BING_API_KEY ?? apiKey;
     if (bingKey) {
       this.providers.set("bing", new BingProvider(bingKey));
     }
 
-    // Google
+    // Google (closed for new registrations)
     const googleKey = process.env.GOOGLE_API_KEY ?? apiKey;
     const googleCx = process.env.GOOGLE_CX ?? "";
     if (googleKey && googleCx) {
@@ -409,7 +513,7 @@ export class SearchProviderFactory {
       );
     }
 
-    // Tavily
+    // Tavily (1000 credits/month free)
     const tavilyKey = process.env.TAVILY_API_KEY ?? apiKey;
     if (tavilyKey) {
       this.providers.set("tavily", new TavilyProvider(tavilyKey));
@@ -418,10 +522,20 @@ export class SearchProviderFactory {
     // DuckDuckGo (always available, no API key needed)
     this.providers.set("duckduckgo", new DuckDuckGoProvider());
 
-    // Brave
+    // Brave ($5/month free, ~1000 searches)
     const braveKey = process.env.BRAVE_API_KEY ?? apiKey;
     if (braveKey) {
       this.providers.set("brave", new BraveProvider(braveKey));
+    }
+
+    // You.com (100/day free, no API key needed for basic usage)
+    const youKey = process.env.YOU_API_KEY;
+    this.providers.set("you", new YouProvider(youKey));
+
+    // Exa.ai (1000 requests/month free)
+    const exaKey = process.env.EXA_API_KEY ?? apiKey;
+    if (exaKey) {
+      this.providers.set("exa", new ExaProvider(exaKey));
     }
   }
 

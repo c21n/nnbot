@@ -39,18 +39,22 @@ rules: []
 # 搜索工具配置（可选）
 # tools:
 #   search:
-#     # 搜索源：serpapi, bing, google, tavily, duckduckgo, brave
-#     provider: duckduckgo  # 无需 API key，开箱即用
-#     # provider: serpapi   # 需要 API key
-#     # apiKey: ${SERPAPI_API_KEY}
+#     # 搜索源（推荐免费选项）：
+#     #   duckduckgo - 免费，无限，无需 API key
+#     #   you        - 免费，100次/天，无需 API key
+#     #   brave      - $5/月免费，约 1000 次，质量最高
+#     #   tavily     - 1000次/月，AI 优化
+#     #   exa        - 1000次/月，语义搜索
+#     #   serpapi    - 100次/月，Google 搜索
+#     provider: duckduckgo  # 默认使用免费搜索源
+#     # apiKey: ${BRAVE_API_KEY}  # 按需配置
 #     defaultLimit: 5
 #     region: cn            # 搜索区域（可选）
 #     fallback: duckduckgo  # 备用搜索源（可选）
 
-# 搜索源 API Key（按需配置）
+# 搜索源 API Key（按需配置，不需要的可以删除）
 # SERPAPI_API_KEY=xxx       # https://serpapi.com
-# BING_API_KEY=xxx          # https://portal.azure.com
-# GOOGLE_API_KEY=xxx        # https://console.cloud.google.com
-# GOOGLE_CX=xxx             # Google Custom Search Engine ID
 # TAVILY_API_KEY=xxx        # https://tavily.com
 # BRAVE_API_KEY=xxx         # https://brave.com/search/api
+# EXA_API_KEY=xxx           # https://exa.ai
+# YOU_API_KEY=xxx           # https://you.com/platform（可选）

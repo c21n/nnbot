@@ -50,9 +50,9 @@ export class WebSearchTool implements ITool {
     },
     provider: {
       type: "string",
-      description: "指定搜索源，如 'serpapi', 'bing', 'duckduckgo' 等",
+      description: "指定搜索源，如 'serpapi', 'bing', 'duckduckgo', 'you', 'exa' 等",
       optional: true,
-      enum: ["serpapi", "bing", "google", "tavily", "duckduckgo", "brave"],
+      enum: ["serpapi", "bing", "google", "tavily", "duckduckgo", "brave", "you", "exa"],
     },
   };
 

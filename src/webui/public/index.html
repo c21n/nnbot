@@ -648,12 +648,14 @@
           <div class="field">
             <label>默认搜索源</label>
             <select id="tools.search.provider">
-              <option value="serpapi">SerpAPI (Google)</option>
-              <option value="bing">Bing</option>
-              <option value="google">Google Custom Search</option>
-              <option value="tavily">Tavily (AI 优化)</option>
-              <option value="duckduckgo">DuckDuckGo (免费)</option>
-              <option value="brave">Brave</option>
+              <option value="duckduckgo">DuckDuckGo (免费，无限)</option>
+              <option value="you">You.com (免费，100次/天)</option>
+              <option value="brave">Brave ($5免费/月)</option>
+              <option value="tavily">Tavily (1000次/月)</option>
+              <option value="exa">Exa.ai (1000次/月)</option>
+              <option value="serpapi">SerpAPI (100次/月)</option>
+              <option value="bing">Bing (已退役)</option>
+              <option value="google">Google (已关闭注册)</option>
             </select>
             <div class="field-hint">选择默认的搜索引擎</div>
           </div>
@@ -661,12 +663,12 @@
             <label>备用搜索源</label>
             <select id="tools.search.fallback">
               <option value="">无</option>
-              <option value="serpapi">SerpAPI</option>
-              <option value="bing">Bing</option>
-              <option value="google">Google</option>
-              <option value="tavily">Tavily</option>
-              <option value="duckduckgo">DuckDuckGo</option>
+              <option value="duckduckgo">DuckDuckGo (免费)</option>
+              <option value="you">You.com (免费)</option>
               <option value="brave">Brave</option>
+              <option value="tavily">Tavily</option>
+              <option value="exa">Exa.ai</option>
+              <option value="serpapi">SerpAPI</option>
             </select>
             <div class="field-hint">主搜索源失败时使用</div>
           </div>
@@ -851,11 +853,13 @@ function collectMemory() {
 // ── Search / Tools ──
 const SEARCH_PROVIDERS = [
   { id: 'serpapi', name: 'SerpAPI', desc: 'Google 搜索', needsKey: true, envKey: 'SERPAPI_API_KEY', free: '100/月' },
-  { id: 'bing', name: 'Bing', desc: '微软搜索', needsKey: true, envKey: 'BING_API_KEY', free: '1000/月' },
-  { id: 'google', name: 'Google', desc: 'Custom Search', needsKey: true, envKey: 'GOOGLE_API_KEY + GOOGLE_CX', free: '100/天' },
+  { id: 'bing', name: 'Bing', desc: '微软搜索', needsKey: true, envKey: 'BING_API_KEY', free: '已退役' },
+  { id: 'google', name: 'Google', desc: 'Custom Search', needsKey: true, envKey: 'GOOGLE_API_KEY + GOOGLE_CX', free: '已关闭注册' },
   { id: 'tavily', name: 'Tavily', desc: 'AI 优化搜索', needsKey: true, envKey: 'TAVILY_API_KEY', free: '1000/月' },
   { id: 'duckduckgo', name: 'DuckDuckGo', desc: '免费搜索', needsKey: false, envKey: null, free: '无限' },
-  { id: 'brave', name: 'Brave', desc: '隐私搜索', needsKey: true, envKey: 'BRAVE_API_KEY', free: '2000/月' },
+  { id: 'brave', name: 'Brave', desc: '隐私搜索', needsKey: true, envKey: 'BRAVE_API_KEY', free: '1000/月' },
+  { id: 'you', name: 'You.com', desc: 'AI 搜索', needsKey: false, envKey: 'YOU_API_KEY（可选）', free: '100/天' },
+  { id: 'exa', name: 'Exa.ai', desc: '语义搜索', needsKey: true, envKey: 'EXA_API_KEY', free: '1000/月' },
 ];
 
 function renderSearch() {
