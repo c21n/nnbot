@@ -9,7 +9,7 @@ llm:
     ds:
       baseUrl: https://api.deepseek.com/v1
       apiKey: ${DEEPSEEK_API_KEY}
-      model: deepseek-v4-pro
+      model: deepseek-chat
       temperature: 0.7
 storage:
   type: sqlite

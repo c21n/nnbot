@@ -1,0 +1,25 @@
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Runtime data
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# Config with real values (ship config.example.yaml instead)
+config.yaml
+persona.yaml
+
+# Logs
+*.log
+
+# External tools
+NapCat.Shell.Windows.OneKey/
+
+# Dev files
+specs/
+CLAUDE.md
+.git/
