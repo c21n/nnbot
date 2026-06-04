@@ -20,6 +20,7 @@ import { createPlugin } from "../core/create-plugin.js";
 import { PLUGIN_PRIORITY } from "../constants.js";
 import { logger } from "../core/logger.js";
 import { runToolLoop, type IToolRegistry, type ToolContext } from "../services/tools/index.js";
+import { shouldEnableTools } from "../services/tools/tool-filter.js";
 
 
 /**
@@ -146,12 +147,23 @@ class AIChatPluginImpl {
       logger.plugin("ai_chat", `上下文: ${rounds} 轮${summary ? ' + 摘要' : ''}`);
 
       let reply: string;
-      const activeTools = this.toolRegistry.getActiveTools();
+      const allActiveTools = this.toolRegistry.getActiveTools();
       const hasToolSupport = typeof this.llm.chatWithTools === "function";
+
+      // Smart tool filtering based on user intent
+      const toolFilter = shouldEnableTools(
+        event.message,
+        allActiveTools.map(t => t.name)
+      );
+
+      // Filter tools based on intent
+      const activeTools = toolFilter.shouldUseTools
+        ? allActiveTools.filter(t => toolFilter.filteredTools.includes(t.name))
+        : [];
 
       if (hasToolSupport && activeTools.length > 0) {
         // Use tool loop
-        logger.plugin("ai_chat", `工具调用已启用: ${activeTools.map((t) => t.name).join(", ")}`);
+        logger.plugin("ai_chat", `工具调用已启用: ${activeTools.map((t) => t.name).join(", ")} (${toolFilter.reason})`);
 
         const toolContext: ToolContext = {
           event,
@@ -170,6 +182,9 @@ class AIChatPluginImpl {
         );
       } else {
         // Plain chat (no tools)
+        if (!toolFilter.shouldUseTools) {
+          logger.plugin("ai_chat", `跳过工具: ${toolFilter.reason}`);
+        }
         reply = await this.llm.chat(finalMessages);
       }
 

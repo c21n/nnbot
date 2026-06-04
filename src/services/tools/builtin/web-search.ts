@@ -31,7 +31,7 @@ interface SearchConfig {
 export class WebSearchTool implements ITool {
   readonly name = "web_search";
   readonly description =
-    "搜索互联网信息。支持多个搜索源（Google、Bing、DuckDuckGo 等）。返回标题、摘要和链接。";
+    "搜索互联网信息。仅在用户明确要求搜索、查询最新消息、或需要实时信息时使用。不要用于日常问候、闲聊或已知知识。";
   readonly parameters: Record<string, ToolParameter> = {
     query: {
       type: "string",
