@@ -16,9 +16,9 @@ export interface SearchConfig {
   maxMemories: number
   minScore: number
   weights: {
-    semantic: number
-    keyword: number
-    time: number
+    rrf: number        // RRF fusion score weight (replaces old semantic+keyword)
+    importance: number  // Memory importance weight
+    time: number        // Time decay weight
   }
 }
 

@@ -5,6 +5,7 @@ import { LifecycleService } from './services/lifecycle.service'
 import { BatchOperationService } from './services/batch.service'
 import { ExportService } from './services/export.service'
 import { MemorySummaryService } from './services/memory-summary.service'
+import { BM25Service } from './search/bm25.service'
 import { buildPromptWithProtection } from './security/prompt-protection'
 import { sanitizeProfile } from './security/sanitize'
 import { checkOutputSafety } from './security/output-check'
@@ -26,6 +27,7 @@ export interface MemoryPluginConfig {
   embeddingProvider: IEmbeddingProvider
   llmProvider: ILLMProvider
   lock: ILock
+  bm25Service?: BM25Service
 }
 
 export class MemoryPlugin {
@@ -52,7 +54,8 @@ export class MemoryPlugin {
 
     this.searchService = new SearchService(
       config.memoryRepo,
-      config.embeddingProvider
+      config.embeddingProvider,
+      config.bm25Service ?? new BM25Service()
     )
 
     this.summaryService = new SummaryService(

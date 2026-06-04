@@ -19,9 +19,9 @@ export const config: AppConfig = {
     maxMemories: 5,
     minScore: 0.3,
     weights: {
-      semantic: 0.4,
-      keyword: 0.2,
-      time: 0.4
+      rrf: 0.5,         // RRF fusion score
+      importance: 0.25,  // Memory importance
+      time: 0.25         // Time decay
     }
   },
   lifecycle: {

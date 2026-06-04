@@ -2,6 +2,7 @@ import { getVectraIndex } from './connection'
 import { IMemoryRepository, WhereClause } from '../interfaces'
 import { Memory, MemoryMetadata, MemoryType } from '../../types'
 import { SearchResult } from '../../types/search.types'
+import { BM25Service } from '../../search/bm25.service'
 import { logger } from '../../utils/logger'
 
 // Flatten MemoryMetadata into vectra-compatible Record
@@ -69,6 +70,7 @@ function matchesWhere(
 }
 
 export class VectraMemoryRepository implements IMemoryRepository {
+  constructor(private bm25?: BM25Service) {}
 
   async save(memory: Memory): Promise<void> {
     const index = await getVectraIndex()
@@ -86,6 +88,9 @@ export class VectraMemoryRepository implements IMemoryRepository {
         ...flattenMetadata(memory),
       },
     })
+
+    // Sync to FTS5 for BM25 search
+    this.bm25?.syncSave(memory)
   }
 
   async query(params: {
@@ -190,6 +195,18 @@ export class VectraMemoryRepository implements IMemoryRepository {
         }),
       },
     })
+
+    // Sync to FTS5
+    const updatedMemory: Memory = {
+      id,
+      text: data.text || String(existing.metadata._text),
+      embedding: vector,
+      metadata: mergedMeta,
+      created_at: data.created_at || Number(existing.metadata.created_at || 0),
+      last_accessed_at: data.last_accessed_at || Number(existing.metadata.last_accessed_at || 0),
+      access_count: data.access_count || Number(existing.metadata.access_count || 0),
+    }
+    this.bm25?.syncUpdate(id, updatedMemory)
   }
 
   async delete(id: string): Promise<void> {
@@ -200,6 +217,9 @@ export class VectraMemoryRepository implements IMemoryRepository {
     if (target) {
       await index.deleteItem(target.id)
     }
+
+    // Sync to FTS5
+    this.bm25?.syncDelete(id)
   }
 
   async deleteByUser(userId: string): Promise<number> {

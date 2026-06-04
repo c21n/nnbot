@@ -22,6 +22,7 @@ import {
   SummaryRepository,
   SqliteUserIndexRepository,
   VectraMemoryRepository,
+  BM25Service,
   setCustomLogger,
 } from "../memory/index.js";
 
@@ -89,7 +90,8 @@ export default createPlugin({
       const summaryRepo = new SummaryRepository();
       const userIndexRepo = new SqliteUserIndexRepository();
 
-      const memoryRepo = new VectraMemoryRepository();
+      const bm25Service = new BM25Service();
+      const memoryRepo = new VectraMemoryRepository(bm25Service);
 
       const embeddingProvider = new SiliconFlowEmbedding(siliconflowKey);
       const llmProvider = new DeepSeekLLM(deepseekKey);
@@ -105,6 +107,7 @@ export default createPlugin({
         embeddingProvider,
         llmProvider,
         lock,
+        bm25Service,
       });
 
       await plugin.initialize();
