@@ -84,6 +84,31 @@ src/
 └── utils/                   # 工具函数
 ```
 
+## 模块分类
+
+新模块先判断是**插件**还是**基础设施**，再决定放哪里。
+
+| | 插件 | 基础设施 |
+|--|------|----------|
+| 位置 | `src/plugins/` | `src/core/`、`src/webui/`、`src/services/` |
+| 注册方式 | `createPlugin()` + 目录自动扫描 | `bot.ts` 中手动注册 |
+| 生命周期 | 可加载/卸载/热重载 | 随 bot 启停 |
+| 依赖注入 | 通过 `PluginServices` 获取 llm、storage 等 | 直接 import |
+
+**判断标准**：
+
+- 需要处理 QQ 消息事件 → **插件**
+- 需要热重载/动态开关 → **插件**
+- 提供 HTTP API / 管理界面 → **基础设施**
+- 框架级能力（日志、配置、插件管理） → **基础设施**
+
+**示例**：
+
+```
+插件: memory、ai-chat、rule-match    ← 处理消息，可热重载
+基础设施: webui、config、logger       ← HTTP API / 框架能力
+```
+
 ## 约定
 
 - 插件使用 `createPlugin()` 工厂函数创建
