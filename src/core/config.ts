@@ -145,6 +145,18 @@ export class ConfigManager {
       };
     }
 
+    // Substitute env vars in memory config
+    let memory: typeof config.memory;
+    if (config.memory) {
+      const embedding = config.memory.embedding
+        ? { ...config.memory.embedding, apiKey: substitute(config.memory.embedding.apiKey) as string }
+        : undefined;
+      const llm = config.memory.llm
+        ? { ...config.memory.llm, apiKey: substitute(config.memory.llm.apiKey) as string }
+        : undefined;
+      memory = { ...config.memory, ...(embedding ? { embedding } : {}), ...(llm ? { llm } : {}) };
+    }
+
     return {
       ...config,
       llm: { ...config.llm, providers },
@@ -152,6 +164,7 @@ export class ConfigManager {
         ...config.onebot,
         accessToken: substitute(config.onebot.accessToken) as string | undefined,
       },
+      memory,
     };
   }
 }

@@ -108,6 +108,7 @@ type WebuiPage =
 ### API 规范
 - **C-3 响应统一性**：所有 Config API 端点使用 `ApiResponse<T>` 包装，不允许裸返回。
 - **C-4 静态资源隔离**：Fastify 静态文件服务只暴露 `public/` 目录，不允许访问上级目录。
+- **C-5 API key 分离存储**：API key 必须存储在 `.env` 文件中，`config.yaml` 只存 `${VAR}` 引用。GET 时解析引用返回实际值，PUT 时提取 key 写入 `.env` 并将引用写入 `config.yaml`。
 
 ### 前端交互
 - **C-5 保存原子性**：配置保存时，`/api/config` 和 `/api/persona` 必须同时成功或同时失败。前端使用 `Promise.all` 保证。
