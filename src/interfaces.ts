@@ -247,6 +247,8 @@ export interface PluginServices {
   readonly hooks: AIChatHooks;
   /** Tool registry for registering and querying tools */
   readonly toolRegistry: import("./services/tools/types.js").IToolRegistry;
+  /** Unified provider manager for LLM and Embedding providers */
+  readonly providers: import("./providers/provider-manager.js").ProviderManager;
 }
 
 // ============ Plugin Definition ============
@@ -434,13 +436,20 @@ export interface AdminConfig {
  */
 export interface MemoryConfig {
   enabled: boolean;
-  embedding: {
-    apiKey: string;
+  embedding?: {
+    /** @deprecated Use providers.defaults.embedding instead */
+    apiKey?: string;
+    /** Provider ID override (falls back to providers.defaults.embedding) */
+    providerId?: string;
     model?: string;
     dimension?: number;
   };
   llm?: {
-    apiKey: string;
+    /** @deprecated Use providers.defaults.llm instead */
+    apiKey?: string;
+    /** Provider ID override (falls back to providers.defaults.llm) */
+    providerId?: string;
+    model?: string;
   };
   redis?: {
     url: string;
@@ -486,6 +495,8 @@ export interface Config {
   context: ContextConfig;
   memory?: MemoryConfig;
   tools?: ToolsConfig;
+  /** Unified model provider configuration */
+  providers?: import("./providers/types.js").ProvidersConfig;
 }
 
 /**

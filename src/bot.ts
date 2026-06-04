@@ -9,7 +9,8 @@ import "dotenv/config";
 import Fastify from "fastify";
 import fastifyStatic from "@fastify/static";
 import { resolve } from "path";
-import { ConfigManager, resolveLLMProvider } from "./core/config.js";
+import { ConfigManager, resolveLLMProvider, resolveProvidersConfig } from "./core/config.js";
+import { ProviderManager } from "./providers/provider-manager.js";
 import { PluginManager } from "./core/plugin-manager.js";
 import { HotReloadManager } from "./core/hot-reload-manager.js";
 import { MessageBuffer } from "./core/message-buffer.js";
@@ -48,6 +49,11 @@ async function main() {
   logger.info(`Using LLM provider: ${llmProvider.name}`);
   await llm.init();
 
+  // Initialize unified provider manager
+  const providersConfig = resolveProvidersConfig(config);
+  const providerManager = new ProviderManager(providersConfig);
+  logger.info(`ProviderManager: ${providersConfig.list.length} providers configured`);
+
   // Initialize OneBot adapter
   const onebot = new OneBotAdapter(config.onebot);
 
@@ -73,6 +79,7 @@ async function main() {
     pluginManager,
     hooks,
     toolRegistry,
+    providers: providerManager,
   };
 
   // Load plugins from directory (auto-discovery)

@@ -12,8 +12,6 @@ import { logger } from "../core/logger.js";
 import type { AIChatHooks, LLMMessage, Event, PluginServices } from "../interfaces.js";
 import {
   MemoryPlugin,
-  SiliconFlowEmbedding,
-  DeepSeekLLM,
   MemoryLock,
   getSqliteConnection,
   SqliteMessageRepository,
@@ -57,19 +55,6 @@ export default createPlugin({
       return;
     }
 
-    const siliconflowKey = memoryConfig.embedding?.apiKey ?? "";
-    const deepseekKey = memoryConfig.llm?.apiKey ?? "";
-
-    if (!siliconflowKey) {
-      logger.warn("[Memory] Missing embedding API key, disabled");
-      return;
-    }
-
-    if (!deepseekKey) {
-      logger.warn("[Memory] Missing LLM API key, disabled");
-      return;
-    }
-
     try {
       // Redirect memory module logs through CHATBOT's logger for consistent format
       setCustomLogger(logger);
@@ -93,8 +78,16 @@ export default createPlugin({
       const bm25Service = new BM25Service();
       const memoryRepo = new VectraMemoryRepository(bm25Service);
 
-      const embeddingProvider = new SiliconFlowEmbedding(siliconflowKey);
-      const llmProvider = new DeepSeekLLM(deepseekKey);
+      // Get providers from ProviderManager
+      // Plugin can override via memory.embedding.providerId / memory.llm.providerId
+      const embeddingProvider = services.providers.getEmbedding(
+        memoryConfig.embedding?.providerId,
+        memoryConfig.embedding?.model
+      );
+      const llmProvider = services.providers.getLLM(
+        memoryConfig.llm?.providerId,
+        memoryConfig.llm?.model
+      );
       const lock = new MemoryLock();
 
       plugin = new MemoryPlugin({

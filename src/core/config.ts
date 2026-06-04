@@ -8,6 +8,7 @@
 import { readFileSync } from "fs";
 import { parse as parseYaml } from "yaml";
 import type { Config, LLMConfig, LLMProviderConfig } from "../interfaces.js";
+import type { ProvidersConfig, ProviderConfig } from "../providers/types.js";
 
 const DEFAULT_CONFIG: Config = {
   server: {
@@ -94,6 +95,8 @@ export class ConfigManager {
       admin: { ...defaults.admin, ...overrides.admin },
       context: { ...defaults.context, ...overrides.context },
       tools: overrides.tools,
+      providers: overrides.providers ?? defaults.providers,
+      memory: overrides.memory ?? defaults.memory,
     };
   }
 
@@ -170,6 +173,18 @@ export class ConfigManager {
       };
     }
 
+    // Substitute env vars in providers config
+    let providersConfig = config.providers;
+    if (providersConfig) {
+      providersConfig = {
+        ...providersConfig,
+        list: providersConfig.list.map(p => ({
+          ...p,
+          apiKey: p.apiKey ? (substitute(p.apiKey) as string) : undefined,
+        })),
+      };
+    }
+
     return {
       ...config,
       llm: { ...config.llm, providers },
@@ -179,6 +194,7 @@ export class ConfigManager {
       },
       memory,
       tools,
+      providers: providersConfig,
     };
   }
 }
@@ -196,4 +212,87 @@ export function resolveLLMProvider(llm: LLMConfig): LLMProviderConfig & { name: 
     );
   }
   return { name: llm.currentProvider, ...provider };
+}
+
+/**
+ * Resolve unified providers config.
+ * If config.providers is set, use it directly.
+ * Otherwise, generate from existing llm.providers and memory config.
+ */
+export function resolveProvidersConfig(config: Config): ProvidersConfig {
+  // If explicit providers config exists, use it
+  if (config.providers) {
+    return config.providers;
+  }
+
+  // Generate from existing configs
+  const list: ProviderConfig[] = []
+  const defaults: ProvidersConfig['defaults'] = {}
+
+  // Migrate llm.providers
+  for (const [name, provider] of Object.entries(config.llm.providers)) {
+    list.push({
+      id: name,
+      type: 'openai',
+      baseUrl: provider.baseUrl,
+      apiKey: provider.apiKey,
+      defaultModel: provider.model,
+    })
+  }
+
+  // Set default LLM from currentProvider
+  const currentLLM = config.llm.providers[config.llm.currentProvider]
+  if (currentLLM) {
+    defaults.llm = {
+      providerId: config.llm.currentProvider,
+      modelId: currentLLM.model,
+    }
+  }
+
+  // Migrate memory embedding config
+  if (config.memory?.embedding?.apiKey) {
+    const existingId = 'siliconflow'
+    const existingProvider = list.find(p => p.id === existingId)
+    if (!existingProvider) {
+      list.push({
+        id: existingId,
+        type: 'openai',
+        baseUrl: 'https://api.siliconflow.cn/v1',
+        apiKey: config.memory.embedding.apiKey,
+        defaultModel: config.memory.embedding.model || 'BAAI/bge-large-zh-v1.5',
+      })
+    }
+    defaults.embedding = {
+      providerId: existingId,
+      modelId: config.memory.embedding.model || 'BAAI/bge-large-zh-v1.5',
+      dimension: config.memory.embedding.dimension || 1024,
+    }
+  }
+
+  // Migrate memory llm config
+  if (config.memory?.llm?.apiKey) {
+    const existingId = 'deepseek-memory'
+    const existingProvider = list.find(p => p.id === 'deepseek')
+    if (existingProvider) {
+      // Reuse existing deepseek provider
+      defaults.llm = {
+        providerId: 'deepseek',
+        modelId: existingProvider.defaultModel || 'deepseek-chat',
+      }
+    } else {
+      list.push({
+        id: existingId,
+        type: 'openai',
+        baseUrl: 'https://api.deepseek.com/v1',
+        apiKey: config.memory.llm.apiKey,
+        defaultModel: 'deepseek-chat',
+      })
+      defaults.llm = {
+        providerId: existingId,
+        modelId: 'deepseek-chat',
+      }
+    }
+  }
+
+  return { list, defaults }
 }

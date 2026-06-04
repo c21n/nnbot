@@ -11,6 +11,26 @@ llm:
       apiKey: ${LLM_DS_API_KEY}
       model: deepseek-v4-pro
       temperature: 0.7
+providers:
+  list:
+    - id: ds
+      type: openai
+      baseUrl: https://api.deepseek.com/v1
+      apiKey: ${LLM_DS_API_KEY}
+      defaultModel: deepseek-v4-pro
+    - id: siliconflow
+      type: openai
+      baseUrl: https://api.siliconflow.cn/v1
+      apiKey: ${SILICONFLOW_API_KEY}
+      defaultModel: BAAI/bge-large-zh-v1.5
+  defaults:
+    llm:
+      providerId: ds
+      modelId: deepseek-v4-pro
+    embedding:
+      providerId: siliconflow
+      modelId: BAAI/bge-large-zh-v1.5
+      dimension: 1024
 storage:
   type: sqlite
   path: data/bot.db
@@ -38,8 +58,6 @@ context:
 rules: []
 memory:
   enabled: true
-  embedding:
-    apiKey: ${SILICONFLOW_API_KEY}
   sqlite:
     path: ./data/memory.db
   search:
