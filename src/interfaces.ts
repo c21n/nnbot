@@ -466,6 +466,7 @@ export interface MemoryConfig {
  */
 export interface ToolsConfig {
   search?: {
+    enabled: boolean;
     provider: string;
     apiKey?: string;
     defaultLimit?: number;

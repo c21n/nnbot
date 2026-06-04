@@ -221,6 +221,13 @@
       align-items: center;
     }
 
+    /* ── Search Providers Status ── */
+    .search-providers-status {
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
     /* ── LLM Provider cards ── */
     .provider-bar {
       display: flex;
@@ -374,6 +381,7 @@
     <div class="sidebar-item" data-section="persona">Persona</div>
     <div class="sidebar-item" data-section="memory">Memory</div>
     <div class="sidebar-item" data-section="memdata">📊 记忆数据</div>
+    <div class="sidebar-item" data-section="tools">🔍 搜索</div>
     <div class="sidebar-item" data-section="admin">Admin</div>
     <div class="sidebar-item" data-section="context">Context</div>
     <div class="sidebar-item" data-section="rules">Rules</div>
@@ -624,6 +632,78 @@
       <button class="btn-add" onclick="addRule()">+ 添加规则</button>
     </div>
 
+    <!-- Tools / Search -->
+    <div id="sec-tools" class="section">
+      <h2>🔍 搜索功能</h2>
+      <div class="field">
+        <label>
+          <input type="checkbox" id="tools.search.enabled" style="width:auto;margin-right:8px">
+          启用搜索功能
+        </label>
+        <div class="field-hint">允许 AI 搜索互联网信息</div>
+      </div>
+
+      <div id="search-config-fields" style="margin-top:20px;opacity:0.5;pointer-events:none">
+        <div class="field-row">
+          <div class="field">
+            <label>默认搜索源</label>
+            <select id="tools.search.provider">
+              <option value="serpapi">SerpAPI (Google)</option>
+              <option value="bing">Bing</option>
+              <option value="google">Google Custom Search</option>
+              <option value="tavily">Tavily (AI 优化)</option>
+              <option value="duckduckgo">DuckDuckGo (免费)</option>
+              <option value="brave">Brave</option>
+            </select>
+            <div class="field-hint">选择默认的搜索引擎</div>
+          </div>
+          <div class="field">
+            <label>备用搜索源</label>
+            <select id="tools.search.fallback">
+              <option value="">无</option>
+              <option value="serpapi">SerpAPI</option>
+              <option value="bing">Bing</option>
+              <option value="google">Google</option>
+              <option value="tavily">Tavily</option>
+              <option value="duckduckgo">DuckDuckGo</option>
+              <option value="brave">Brave</option>
+            </select>
+            <div class="field-hint">主搜索源失败时使用</div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>API Key</label>
+          <input id="tools.search.apiKey" type="password" placeholder="留空则使用环境变量">
+          <div class="field-hint">搜索源的 API Key（自动保存到 .env）</div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label>默认结果数</label>
+            <input id="tools.search.defaultLimit" type="number" placeholder="5" min="1" max="10">
+          </div>
+          <div class="field">
+            <label>搜索区域</label>
+            <select id="tools.search.region">
+              <option value="">自动</option>
+              <option value="cn">中国</option>
+              <option value="us">美国</option>
+              <option value="jp">日本</option>
+              <option value="kr">韩国</option>
+            </select>
+            <div class="field-hint">影响搜索结果的地域偏好</div>
+          </div>
+        </div>
+
+        <!-- 搜索源状态 -->
+        <div class="search-providers-status" style="margin-top:24px">
+          <h3 style="font-size:15px;margin-bottom:12px;color:var(--text-dim)">搜索源状态</h3>
+          <div id="search-providers-list" style="display:grid;gap:8px"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="actions">
       <button class="btn btn-secondary" onclick="loadConfig()">重置</button>
       <button class="btn btn-primary" onclick="saveConfig()">💾 保存</button>
@@ -697,6 +777,9 @@ function renderConfig() {
 
   // Memory
   renderMemory();
+
+  // Search
+  renderSearch();
 }
 
 // ── Memory ──
@@ -762,6 +845,88 @@ function collectMemory() {
       maxMemoriesPerUser: parseInt(document.getElementById('memory.lifecycle.maxMemoriesPerUser')?.value) || 500,
       summaryTriggerRounds: parseInt(document.getElementById('memory.lifecycle.summaryTriggerRounds')?.value) || 15,
     },
+  };
+}
+
+// ── Search / Tools ──
+const SEARCH_PROVIDERS = [
+  { id: 'serpapi', name: 'SerpAPI', desc: 'Google 搜索', needsKey: true, envKey: 'SERPAPI_API_KEY', free: '100/月' },
+  { id: 'bing', name: 'Bing', desc: '微软搜索', needsKey: true, envKey: 'BING_API_KEY', free: '1000/月' },
+  { id: 'google', name: 'Google', desc: 'Custom Search', needsKey: true, envKey: 'GOOGLE_API_KEY + GOOGLE_CX', free: '100/天' },
+  { id: 'tavily', name: 'Tavily', desc: 'AI 优化搜索', needsKey: true, envKey: 'TAVILY_API_KEY', free: '1000/月' },
+  { id: 'duckduckgo', name: 'DuckDuckGo', desc: '免费搜索', needsKey: false, envKey: null, free: '无限' },
+  { id: 'brave', name: 'Brave', desc: '隐私搜索', needsKey: true, envKey: 'BRAVE_API_KEY', free: '2000/月' },
+];
+
+function renderSearch() {
+  const search = config.tools?.search;
+  const enabled = search?.enabled ?? false;
+
+  const checkbox = document.getElementById('tools.search.enabled');
+  checkbox.checked = enabled;
+  toggleSearchFields(enabled);
+
+  checkbox.onchange = () => toggleSearchFields(checkbox.checked);
+
+  setVal('tools.search.provider', search?.provider || 'duckduckgo');
+  setVal('tools.search.fallback', search?.fallback || '');
+  setVal('tools.search.apiKey', search?.apiKey);
+  setVal('tools.search.defaultLimit', search?.defaultLimit);
+  setVal('tools.search.region', search?.region);
+
+  renderSearchProviders();
+}
+
+function toggleSearchFields(enabled) {
+  const fields = document.getElementById('search-config-fields');
+  fields.style.opacity = enabled ? '1' : '0.5';
+  fields.style.pointerEvents = enabled ? 'auto' : 'none';
+}
+
+function renderSearchProviders() {
+  const container = document.getElementById('search-providers-list');
+  const envKeys = Object.keys(config._env || {});
+
+  container.innerHTML = SEARCH_PROVIDERS.map(p => {
+    const hasKey = !p.needsKey || envKeys.some(k => p.envKey?.includes(k));
+    const status = p.needsKey
+      ? (hasKey ? '✅' : '⚠️')
+      : '✅';
+    const statusColor = p.needsKey
+      ? (hasKey ? 'var(--success)' : 'var(--primary)')
+      : 'var(--success)';
+
+    return `
+      <div style="display:flex;align-items:center;padding:8px 12px;background:var(--input-bg);border-radius:6px;font-size:13px">
+        <span style="margin-right:8px">${status}</span>
+        <span style="font-weight:500;min-width:100px">${p.name}</span>
+        <span style="color:var(--text-dim);flex:1">${p.desc}</span>
+        <span style="color:var(--text-dim);font-size:12px">${p.needsKey ? p.envKey : '无需 API Key'}</span>
+        <span style="color:${statusColor};margin-left:12px;font-size:12px">${p.free}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function collectSearch() {
+  const enabled = document.getElementById('tools.search.enabled')?.checked ?? false;
+  if (!enabled) {
+    return { enabled: false, provider: 'duckduckgo' };
+  }
+
+  const provider = document.getElementById('tools.search.provider')?.value || 'duckduckgo';
+  const fallback = document.getElementById('tools.search.fallback')?.value || undefined;
+  const apiKey = document.getElementById('tools.search.apiKey')?.value || undefined;
+  const defaultLimit = parseInt(document.getElementById('tools.search.defaultLimit')?.value) || undefined;
+  const region = document.getElementById('tools.search.region')?.value || undefined;
+
+  return {
+    enabled: true,
+    provider,
+    ...(fallback ? { fallback } : {}),
+    ...(apiKey ? { apiKey } : {}),
+    ...(defaultLimit ? { defaultLimit } : {}),
+    ...(region ? { region } : {}),
   };
 }
 
@@ -1247,6 +1412,9 @@ async function saveConfig() {
     },
     rules: getRules(),
     memory: collectMemory(),
+    tools: {
+      search: collectSearch(),
+    },
   };
 
   const newPersona = collectPersona();

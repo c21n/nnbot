@@ -12,6 +12,7 @@
 import { createPlugin } from "../core/create-plugin.js";
 import { CalculatorTool } from "../services/tools/builtin/calculator.js";
 import { WebSearchTool } from "../services/tools/builtin/web-search.js";
+import type { ITool } from "../services/tools/types.js";
 import { logger } from "../core/logger.js";
 
 export default createPlugin({
@@ -19,17 +20,21 @@ export default createPlugin({
   description: "内置工具注册插件",
 
   async onLoad(services) {
+    const tools: ITool[] = [new CalculatorTool()];
+
+    // 只有启用搜索功能时才注册搜索工具
     const searchConfig = services.config.tools?.search;
-    const tools = [
-      new CalculatorTool(),
-      new WebSearchTool({
-        provider: (searchConfig?.provider as any) ?? "serpapi",
-        apiKey: searchConfig?.apiKey ?? process.env.SERPAPI_API_KEY,
-        defaultLimit: searchConfig?.defaultLimit ?? 5,
-        region: searchConfig?.region,
-        fallback: searchConfig?.fallback as any,
-      }),
-    ];
+    if (searchConfig?.enabled !== false) {
+      tools.push(
+        new WebSearchTool({
+          provider: (searchConfig?.provider as any) ?? "duckduckgo",
+          apiKey: searchConfig?.apiKey ?? process.env.SERPAPI_API_KEY,
+          defaultLimit: searchConfig?.defaultLimit ?? 5,
+          region: searchConfig?.region,
+          fallback: searchConfig?.fallback as any,
+        })
+      );
+    }
 
     for (const tool of tools) {
       services.toolRegistry.register(tool);

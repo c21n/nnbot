@@ -12,7 +12,7 @@ import type { FastifyInstance } from "fastify";
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import axios from "axios";
-import type { Config, LLMProviderConfig, MemoryConfig } from "../interfaces.js";
+import type { Config, LLMProviderConfig, MemoryConfig, ToolsConfig } from "../interfaces.js";
 import { ok, fail } from "./utils/response.js";
 import { readEnvFile, writeEnvVars } from "./utils/env-file.js";
 
@@ -51,7 +51,19 @@ function resolveEnvRefs(config: Config): Config {
     memory = { ...config.memory, ...(embedding ? { embedding } : {}), ...(llm ? { llm } : {}) };
   }
 
-  return { ...config, llm: { ...config.llm, providers }, memory };
+  // Resolve tools search key
+  let tools: ToolsConfig | undefined;
+  if (config.tools?.search) {
+    tools = {
+      ...config.tools,
+      search: {
+        ...config.tools.search,
+        apiKey: resolve(config.tools.search.apiKey),
+      },
+    };
+  }
+
+  return { ...config, llm: { ...config.llm, providers }, memory, tools };
 }
 
 /**
@@ -93,7 +105,19 @@ function extractApiKeys(config: Config): { keys: Record<string, string>; clean: 
     }
   }
 
-  return { keys, clean: { ...config, llm: { ...config.llm, providers }, memory } };
+  // Extract tools search key
+  let tools: ToolsConfig | undefined = config.tools;
+  if (tools?.search?.apiKey && !tools.search.apiKey.startsWith("${")) {
+    const provider = tools.search.provider.toUpperCase();
+    const envKey = `${provider}_API_KEY`;
+    keys[envKey] = tools.search.apiKey;
+    tools = {
+      ...tools,
+      search: { ...tools.search, apiKey: `\${${envKey}}` },
+    };
+  }
+
+  return { keys, clean: { ...config, llm: { ...config.llm, providers }, memory, tools } };
 }
 
 // ── Routes ──
