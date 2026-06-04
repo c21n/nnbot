@@ -11,15 +11,6 @@ export enum LogLevel {
   ERROR = 3,
 }
 
-const LOG_LEVEL_COLORS: Record<LogLevel, string> = {
-  [LogLevel.DEBUG]: "\x1b[36m",
-  [LogLevel.INFO]: "\x1b[32m",
-  [LogLevel.WARN]: "\x1b[33m",
-  [LogLevel.ERROR]: "\x1b[31m",
-};
-
-const RESET_COLOR = "\x1b[0m";
-
 class Logger {
   private formatTime(): string {
     return new Date().toLocaleTimeString("zh-CN", { hour12: false });

@@ -11,6 +11,7 @@ import { readFileSync, writeFileSync, existsSync } from "fs";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import axios from "axios";
 import type { Config } from "../interfaces.js";
+import { ok, fail } from "./utils/response.js";
 
 const CONFIG_PATH = "config.yaml";
 const PERSONA_PATH = "persona.yaml";
@@ -21,12 +22,25 @@ export async function configApi(app: FastifyInstance): Promise<void> {
    */
   app.get("/api/config", async (_request, reply) => {
     try {
+      if (!existsSync(CONFIG_PATH)) {
+        return reply.send(ok({
+          server: { host: "0.0.0.0", port: 8080 },
+          onebot: { url: "http://127.0.0.1:3000" },
+          llm: { currentProvider: "", providers: {} },
+          storage: { type: "sqlite", path: "data/bot.db" },
+          plugins: { enabled: [], disabled: [] },
+          admin: { userIds: [], commands: [] },
+          context: { historyLimit: 10 },
+          rules: [],
+        }));
+      }
+
       const content = readFileSync(CONFIG_PATH, "utf-8");
       const config = parseYaml(content) as Config;
-      return reply.send({ success: true, data: config });
+      return reply.send(ok(config));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      return reply.status(500).send({ success: false, error: message });
+      return reply.status(500).send(fail(message));
     }
   });
 
@@ -38,19 +52,16 @@ export async function configApi(app: FastifyInstance): Promise<void> {
       const config = request.body as Config;
 
       if (!config.server || !config.llm) {
-        return reply.status(400).send({
-          success: false,
-          error: "Missing required config sections",
-        });
+        return reply.status(400).send(fail("Missing required config sections"));
       }
 
       const yaml = stringifyYaml(config, { indent: 2 });
       writeFileSync(CONFIG_PATH, yaml, "utf-8");
 
-      return reply.send({ success: true });
+      return reply.send(ok(undefined));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      return reply.status(500).send({ success: false, error: message });
+      return reply.status(500).send(fail(message));
     }
   });
 
@@ -64,10 +75,7 @@ export async function configApi(app: FastifyInstance): Promise<void> {
     };
 
     if (!baseUrl) {
-      return reply.status(400).send({
-        success: false,
-        error: "baseUrl is required",
-      });
+      return reply.status(400).send(fail("baseUrl is required"));
     }
 
     try {
@@ -85,13 +93,10 @@ export async function configApi(app: FastifyInstance): Promise<void> {
         id: string;
       }>;
 
-      return reply.send({
-        success: true,
-        data: models.map((m) => m.id),
-      });
+      return reply.send(ok(models.map((m) => m.id)));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      return reply.send({ success: false, error: message });
+      return reply.send(fail(message));
     }
   });
 
@@ -101,25 +106,19 @@ export async function configApi(app: FastifyInstance): Promise<void> {
   app.get("/api/persona", async (_request, reply) => {
     try {
       if (!existsSync(PERSONA_PATH)) {
-        return reply.send({
-          success: true,
-          data: { default: "", users: {} },
-        });
+        return reply.send(ok({ default: "", users: {} }));
       }
 
       const content = readFileSync(PERSONA_PATH, "utf-8");
       const config = parseYaml(content) as { default?: string; users?: Record<string, string> };
 
-      return reply.send({
-        success: true,
-        data: {
-          default: config.default || "",
-          users: config.users || {},
-        },
-      });
+      return reply.send(ok({
+        default: config.default || "",
+        users: config.users || {},
+      }));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      return reply.status(500).send({ success: false, error: message });
+      return reply.status(500).send(fail(message));
     }
   });
 
@@ -144,10 +143,10 @@ export async function configApi(app: FastifyInstance): Promise<void> {
       const yaml = stringifyYaml(config, { indent: 2 });
       writeFileSync(PERSONA_PATH, yaml, "utf-8");
 
-      return reply.send({ success: true });
+      return reply.send(ok(undefined));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      return reply.status(500).send({ success: false, error: message });
+      return reply.status(500).send(fail(message));
     }
   });
 }

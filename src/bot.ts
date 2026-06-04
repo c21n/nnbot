@@ -18,6 +18,7 @@ import { SQLiteStorage } from "./services/storage/sqlite.js";
 import { OpenAICompatibleService } from "./services/llm/openai.js";
 import { OneBotAdapter } from "./utils/onebot.js";
 import { configApi } from "./webui/config-api.js";
+import { memoryApi } from "./webui/memory-api.js";
 import type { PluginServices, AIChatHooks } from "./interfaces.js";
 
 const PLUGINS_DIR = resolve(import.meta.dirname, "plugins");
@@ -117,6 +118,7 @@ async function main() {
   // WebUI: serve static files and config API
   await app.register(fastifyStatic, { root: WEBUI_DIR, prefix: "/" });
   await app.register(configApi);
+  await app.register(memoryApi);
 
   // Health check endpoint
   app.get("/health", async () => {

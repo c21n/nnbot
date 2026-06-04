@@ -116,7 +116,7 @@ export class HotReloadManager implements IHotReloadManager {
    */
   private async processFileChange(
     filename: string,
-    eventType: string
+    _eventType: string
   ): Promise<void> {
     const filePath = join(this.dir, filename);
     const pluginName = basename(filename, extname(filename));

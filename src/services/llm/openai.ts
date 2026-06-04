@@ -24,8 +24,8 @@ export class OpenAICompatibleService implements ILLMService {
   private availableModels: string[] = [];
 
   constructor(
-    private baseUrl: string,
-    private apiKey: string,
+    baseUrl: string,
+    apiKey: string,
     options: {
       model?: string;
       temperature?: number;
