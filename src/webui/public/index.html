@@ -852,14 +852,14 @@ function collectMemory() {
 
 // ── Search / Tools ──
 const SEARCH_PROVIDERS = [
-  { id: 'serpapi', name: 'SerpAPI', desc: 'Google 搜索', needsKey: true, envKey: 'SERPAPI_API_KEY', free: '100/月' },
-  { id: 'bing', name: 'Bing', desc: '微软搜索', needsKey: true, envKey: 'BING_API_KEY', free: '已退役' },
-  { id: 'google', name: 'Google', desc: 'Custom Search', needsKey: true, envKey: 'GOOGLE_API_KEY + GOOGLE_CX', free: '已关闭注册' },
-  { id: 'tavily', name: 'Tavily', desc: 'AI 优化搜索', needsKey: true, envKey: 'TAVILY_API_KEY', free: '1000/月' },
-  { id: 'duckduckgo', name: 'DuckDuckGo', desc: '免费搜索', needsKey: false, envKey: null, free: '无限' },
-  { id: 'brave', name: 'Brave', desc: '隐私搜索', needsKey: true, envKey: 'BRAVE_API_KEY', free: '1000/月' },
-  { id: 'you', name: 'You.com', desc: 'AI 搜索', needsKey: false, envKey: 'YOU_API_KEY（可选）', free: '100/天' },
-  { id: 'exa', name: 'Exa.ai', desc: '语义搜索', needsKey: true, envKey: 'EXA_API_KEY', free: '1000/月' },
+  { id: 'duckduckgo', name: 'DuckDuckGo', desc: '免费搜索', needsKey: false, envKey: null, free: '无限', registerUrl: null },
+  { id: 'you', name: 'You.com', desc: 'AI 搜索', needsKey: false, envKey: 'YOU_API_KEY（可选）', free: '100/天', registerUrl: 'https://you.com/platform' },
+  { id: 'brave', name: 'Brave', desc: '隐私搜索', needsKey: true, envKey: 'BRAVE_API_KEY', free: '1000/月', registerUrl: 'https://api.search.brave.com/' },
+  { id: 'tavily', name: 'Tavily', desc: 'AI 优化搜索', needsKey: true, envKey: 'TAVILY_API_KEY', free: '1000/月', registerUrl: 'https://tavily.com' },
+  { id: 'exa', name: 'Exa.ai', desc: '语义搜索', needsKey: true, envKey: 'EXA_API_KEY', free: '1000/月', registerUrl: 'https://exa.ai' },
+  { id: 'serpapi', name: 'SerpAPI', desc: 'Google 搜索', needsKey: true, envKey: 'SERPAPI_API_KEY', free: '100/月', registerUrl: 'https://serpapi.com' },
+  { id: 'bing', name: 'Bing', desc: '微软搜索（已退役）', needsKey: true, envKey: 'BING_API_KEY', free: '已退役', registerUrl: null },
+  { id: 'google', name: 'Google', desc: 'Custom Search（已关闭）', needsKey: true, envKey: 'GOOGLE_API_KEY + GOOGLE_CX', free: '已关闭注册', registerUrl: null },
 ];
 
 function renderSearch() {
@@ -900,13 +900,18 @@ function renderSearchProviders() {
       ? (hasKey ? 'var(--success)' : 'var(--primary)')
       : 'var(--success)';
 
+    const registerLink = p.registerUrl
+      ? `<a href="${p.registerUrl}" target="_blank" style="color:var(--primary);text-decoration:none;font-size:11px;margin-left:8px">注册</a>`
+      : '';
+
     return `
       <div style="display:flex;align-items:center;padding:8px 12px;background:var(--input-bg);border-radius:6px;font-size:13px">
         <span style="margin-right:8px">${status}</span>
-        <span style="font-weight:500;min-width:100px">${p.name}</span>
+        <span style="font-weight:500;min-width:80px">${p.name}</span>
         <span style="color:var(--text-dim);flex:1">${p.desc}</span>
-        <span style="color:var(--text-dim);font-size:12px">${p.needsKey ? p.envKey : '无需 API Key'}</span>
-        <span style="color:${statusColor};margin-left:12px;font-size:12px">${p.free}</span>
+        <span style="color:var(--text-dim);font-size:11px">${p.needsKey ? p.envKey : '无需 Key'}</span>
+        <span style="color:${statusColor};margin-left:12px;font-size:12px;min-width:60px;text-align:right">${p.free}</span>
+        ${registerLink}
       </div>
     `;
   }).join('');
