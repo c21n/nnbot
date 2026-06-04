@@ -401,10 +401,10 @@ class YouProvider implements ISearchProvider {
   constructor(private apiKey?: string) {}
 
   async search(options: SearchOptions): Promise<SearchResult[]> {
-    // Use You.com Smart Search API (free tier)
+    // Use You.com Search API
     const params = new URLSearchParams({
       query: options.query,
-      num_web_results: String(options.limit),
+      limit: String(options.limit),
     });
 
     if (options.language !== "auto") {
@@ -420,8 +420,9 @@ class YouProvider implements ISearchProvider {
       headers["X-API-Key"] = this.apiKey;
     }
 
+    // Try You.com API endpoint
     const response = await fetch(
-      `https://api.you.com/search?${params}`,
+      `https://api.you.com/v1/search?${params}`,
       {
         headers,
         signal: AbortSignal.timeout(options.timeout),
@@ -433,7 +434,7 @@ class YouProvider implements ISearchProvider {
     }
 
     const data = (await response.json()) as any;
-    const results = data.hits ?? [];
+    const results = data.hits ?? data.results ?? [];
 
     return results.slice(0, options.limit).map((item: any) => ({
       title: item.title ?? "",
