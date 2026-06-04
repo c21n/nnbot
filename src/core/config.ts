@@ -93,6 +93,7 @@ export class ConfigManager {
       rules: overrides.rules ?? defaults.rules,
       admin: { ...defaults.admin, ...overrides.admin },
       context: { ...defaults.context, ...overrides.context },
+      tools: overrides.tools,
     };
   }
 
@@ -157,6 +158,18 @@ export class ConfigManager {
       memory = { ...config.memory, ...(embedding ? { embedding } : {}), ...(llm ? { llm } : {}) };
     }
 
+    // Substitute env vars in tools config
+    let tools: typeof config.tools;
+    if (config.tools?.search) {
+      tools = {
+        ...config.tools,
+        search: {
+          ...config.tools.search,
+          apiKey: substitute(config.tools.search.apiKey) as string,
+        },
+      };
+    }
+
     return {
       ...config,
       llm: { ...config.llm, providers },
@@ -165,6 +178,7 @@ export class ConfigManager {
         accessToken: substitute(config.onebot.accessToken) as string | undefined,
       },
       memory,
+      tools,
     };
   }
 }

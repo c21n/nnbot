@@ -19,6 +19,7 @@ import { OpenAICompatibleService } from "./services/llm/openai.js";
 import { OneBotAdapter } from "./utils/onebot.js";
 import { configApi } from "./webui/config-api.js";
 import { memoryApi } from "./webui/memory-api.js";
+import { toolRegistry } from "./services/tools/index.js";
 import type { PluginServices, AIChatHooks } from "./interfaces.js";
 
 const PLUGINS_DIR = resolve(import.meta.dirname, "plugins");
@@ -71,6 +72,7 @@ async function main() {
     config,
     pluginManager,
     hooks,
+    toolRegistry,
   };
 
   // Load plugins from directory (auto-discovery)

@@ -122,6 +122,27 @@ export type IStorage = IKVStorage & IConversationStorage;
 // ============ LLM Interface ============
 
 /**
+ * Tool call request from LLM
+ */
+export interface LLMToolCall {
+  readonly id: string;
+  readonly name: string;
+  readonly arguments: Record<string, unknown>;
+}
+
+/**
+ * LLM response with tool call support
+ */
+export interface LLMResponse {
+  /** Text reply (when no tool calls) */
+  readonly content: string | null;
+  /** Tool call requests (when LLM wants to call tools) */
+  readonly toolCalls: LLMToolCall[];
+  /** Whether the response is final (no more tool calls) */
+  readonly done: boolean;
+}
+
+/**
  * LLM Service interface
  */
 export interface ILLMService {
@@ -142,6 +163,15 @@ export interface ILLMService {
   ): AsyncGenerator<string>;
 
   /**
+   * Send messages with tool support and get a response
+   */
+  chatWithTools?(
+    messages: LLMMessage[],
+    tools: import("./services/tools/types.js").ITool[],
+    options?: LLMChatOptions
+  ): Promise<LLMResponse>;
+
+  /**
    * List available models
    */
   listModels(): Promise<string[]>;
@@ -151,8 +181,12 @@ export interface ILLMService {
  * LLM message structure
  */
 export interface LLMMessage {
-  role: "system" | "user" | "assistant";
+  role: "system" | "user" | "assistant" | "tool";
   content: string;
+  /** Tool calls in this message (for assistant role) */
+  toolCalls?: LLMToolCall[];
+  /** Tool call ID (for tool role) */
+  toolCallId?: string;
 }
 
 /**
@@ -211,6 +245,8 @@ export interface PluginServices {
   readonly config: Config;
   readonly pluginManager: IPluginManager;
   readonly hooks: AIChatHooks;
+  /** Tool registry for registering and querying tools */
+  readonly toolRegistry: import("./services/tools/types.js").IToolRegistry;
 }
 
 // ============ Plugin Definition ============
@@ -426,6 +462,17 @@ export interface MemoryConfig {
 }
 
 /**
+ * Tools configuration
+ */
+export interface ToolsConfig {
+  search?: {
+    provider: string;
+    apiKey: string;
+    defaultLimit?: number;
+  };
+}
+
+/**
  * Root configuration
  */
 export interface Config {
@@ -438,6 +485,7 @@ export interface Config {
   admin: AdminConfig;
   context: ContextConfig;
   memory?: MemoryConfig;
+  tools?: ToolsConfig;
 }
 
 /**

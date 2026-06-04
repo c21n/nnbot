@@ -35,5 +35,10 @@ admin:
 context:
   historyLimit: 10
 rules: []
-memory:
-  enabled: false
+
+# 搜索工具配置（可选）
+# tools:
+#   search:
+#     provider: serpapi
+#     apiKey: ${SERPAPI_API_KEY}
+#     defaultLimit: 5

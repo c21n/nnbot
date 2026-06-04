@@ -9,7 +9,8 @@ import type {
   Event,
   Response,
   ILLMService,
-  IConversationStorage,
+  IStorage,
+  LLMMessage,
   AIChatHooks,
   PluginServices,
 } from "../interfaces.js";
@@ -18,6 +19,7 @@ import { OpenAICompatibleService } from "../services/llm/openai.js";
 import { createPlugin } from "../core/create-plugin.js";
 import { PLUGIN_PRIORITY } from "../constants.js";
 import { logger } from "../core/logger.js";
+import { runToolLoop, type IToolRegistry, type ToolContext } from "../services/tools/index.js";
 
 
 /**
@@ -27,15 +29,17 @@ import { logger } from "../core/logger.js";
 class AIChatPluginImpl {
   readonly name = "ai_chat";
   readonly version = "1.0.0";
-  readonly description = "AI 对话插件 - 支持上下文、人格设定和摘要压缩";
+  readonly description = "AI 对话插件 - 支持上下文、人格设定、摘要压缩和工具调用";
   readonly priority = PLUGIN_PRIORITY.AI_CHAT;
 
   private persona!: PersonaService;
   private historyLimit!: number;
   private compressThreshold!: number;
   private llm!: ILLMService;
-  private storage!: IConversationStorage;
+  private storage!: IStorage;
   private hooks: AIChatHooks = {};
+  private toolRegistry!: IToolRegistry;
+  private config!: PluginServices["config"];
 
   /**
    * Initialize plugin with services
@@ -46,6 +50,8 @@ class AIChatPluginImpl {
     this.historyLimit = services.config.context?.historyLimit ?? 10;
     this.compressThreshold = services.config.context?.summaryCompressThreshold ?? 10;
     this.hooks = services.hooks;
+    this.toolRegistry = services.toolRegistry;
+    this.config = services.config;
 
     // Check for plugin-specific LLM config
     const pluginConfig = services.config.plugins?.ai_chat;
@@ -90,7 +96,7 @@ class AIChatPluginImpl {
       const allHistory = await this.storage.getHistory(event.userId, 100); // Get more for compression
 
       // Compress if needed
-      let contextMessages: Array<{ role: "user" | "assistant"; content: string }>;
+      let contextMessages: Array<LLMMessage>;
       let summary = "";
 
       // Only compress when excess rounds exceed threshold
@@ -111,7 +117,7 @@ class AIChatPluginImpl {
             role: m.role as "user" | "assistant",
             content: m.content,
           })),
-        ];
+        ] as LLMMessage[];
 
         logger.plugin("ai_chat", `压缩: ${excessRounds} 轮 → 摘要`);
       } else {
@@ -123,10 +129,10 @@ class AIChatPluginImpl {
       }
 
       // Build messages array
-      const messages = [
-        { role: "system" as const, content: systemPrompt },
+      const messages: LLMMessage[] = [
+        { role: "system", content: systemPrompt },
         ...contextMessages,
-        { role: "user" as const, content: `${userInfo}\n\n用户说: ${event.message}` },
+        { role: "user", content: `${userInfo}\n\n用户说: ${event.message}` },
       ];
 
       // Apply beforeLLM hook
@@ -135,10 +141,37 @@ class AIChatPluginImpl {
         finalMessages = await this.hooks.beforeLLM(messages, event);
       }
 
-      // Call LLM
+      // Call LLM (with or without tools)
       const rounds = Math.floor(contextMessages.length / 2);
       logger.plugin("ai_chat", `上下文: ${rounds} 轮${summary ? ' + 摘要' : ''}`);
-      let reply = await this.llm.chat(finalMessages);
+
+      let reply: string;
+      const activeTools = this.toolRegistry.getActiveTools();
+      const hasToolSupport = typeof this.llm.chatWithTools === "function";
+
+      if (hasToolSupport && activeTools.length > 0) {
+        // Use tool loop
+        logger.plugin("ai_chat", `工具调用已启用: ${activeTools.map((t) => t.name).join(", ")}`);
+
+        const toolContext: ToolContext = {
+          event,
+          llm: this.llm,
+          storage: this.storage,
+          config: this.config,
+          timeout: 30000,  // default, overridden by ToolLoopConfig.toolTimeout if set
+        };
+
+        reply = await runToolLoop(
+          finalMessages,
+          activeTools,
+          toolContext,
+          { chatWithTools: (msgs, tools) => this.llm.chatWithTools!(msgs, tools) },
+          { maxSteps: 10, toolTimeout: 30000, logToolCalls: true }
+        );
+      } else {
+        // Plain chat (no tools)
+        reply = await this.llm.chat(finalMessages);
+      }
 
       // Apply afterLLM hook
       if (this.hooks.afterLLM) {
