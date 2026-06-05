@@ -1,155 +1,155 @@
-# NNBot Plugin Marketplace
+# NNBot 插件市场
 
-Welcome to the NNBot Plugin Marketplace! This guide will help you discover, install, and manage plugins for your NNBot instance.
+欢迎使用 NNBot 插件市场！本指南将帮助你发现、安装和管理 NNBot 插件。
 
-## Quick Start
+## 快速开始
 
-### Accessing the Marketplace
+### 访问市场
 
-1. **Web UI**: Visit `http://your-nnbot-host:3000/marketplace/`
-2. **Command**: Use `/plugin` commands in chat
+1. **WebUI**：访问 `http://你的NNBot地址:8080`，点击侧边栏「插件市场」
+2. **命令行**：在聊天中使用 `/plugin` 命令
 
-### Browsing Plugins
+### 浏览插件
 
-**Web UI**:
-- Visit the marketplace homepage
-- Use the search bar to find plugins
-- Browse by category using the category tags
-- Check out popular and recommended plugins
+**WebUI**：
+- 访问市场首页
+- 使用搜索栏查找插件
+- 使用分类标签按类别浏览
+- 查看热门和推荐插件
 
-**Command**:
+**命令行**：
 ```
-/plugin search <keyword>
+/plugin search <关键词>
 /plugin popular
 /plugin recommended
 ```
 
-### Installing Plugins
+### 安装插件
 
-**Web UI**:
-1. Find a plugin you want to install
-2. Click on the plugin card to view details
-3. Click the "Install" button
-4. Wait for installation to complete
+**WebUI**：
+1. 找到想安装的插件
+2. 点击插件卡片查看详情
+3. 点击「安装」按钮
+4. 等待安装完成
 
-**Command**:
+**命令行**：
 ```
-/plugin install <plugin-id>
+/plugin install <插件ID>
 ```
 
-Example:
+示例：
 ```
 /plugin install username/plugin-name
 ```
 
-### Viewing Installed Plugins
+### 查看已安装插件
 
-**Web UI**:
-- Click "Installed" in the navigation bar
-- See all installed plugins with their status
+**WebUI**：
+- 点击「已安装插件」按钮
+- 查看所有已安装插件及其状态
 
-**Command**:
+**命令行**：
 ```
 /plugin list
 ```
 
-### Updating Plugins
+### 更新插件
 
-**Web UI**:
-1. Go to the "Installed" page
-2. Click "Update" next to a plugin with an available update
-3. Or click "Update All" to update all plugins
+**WebUI**：
+1. 进入「已安装插件」页面
+2. 点击有可用更新的插件旁的「更新」按钮
+3. 或点击「全部更新」更新所有插件
 
-**Command**:
+**命令行**：
 ```
-/plugin update <plugin-id>
+/plugin update <插件ID>
 /plugin update --all
 ```
 
-### Uninstalling Plugins
+### 卸载插件
 
-**Web UI**:
-1. Go to the "Installed" page
-2. Click "Uninstall" next to the plugin you want to remove
-3. Confirm the uninstallation
+**WebUI**：
+1. 进入「已安装插件」页面
+2. 点击要卸载的插件旁的「卸载」按钮
+3. 确认卸载
 
-**Command**:
+**命令行**：
 ```
-/plugin uninstall <plugin-id>
+/plugin uninstall <插件ID>
 ```
 
-## Plugin Commands Reference
+## 插件命令参考
 
-| Command | Description |
-|---------|-------------|
-| `/plugin search <query>` | Search plugins by keyword |
-| `/plugin info <plugin-id>` | View plugin details |
-| `/plugin install <plugin-id>` | Install a plugin |
-| `/plugin uninstall <plugin-id>` | Uninstall a plugin |
-| `/plugin update <plugin-id>` | Update a single plugin |
-| `/plugin update --all` | Update all plugins |
-| `/plugin list` | List installed plugins |
-| `/plugin popular` | View popular plugins |
-| `/plugin recommended` | View recommended plugins |
-| `/plugin help` | Show command help |
+| 命令 | 说明 |
+|------|------|
+| `/plugin search <关键词>` | 按关键词搜索插件 |
+| `/plugin info <插件ID>` | 查看插件详情 |
+| `/plugin install <插件ID>` | 安装插件 |
+| `/plugin uninstall <插件ID>` | 卸载插件 |
+| `/plugin update <插件ID>` | 更新单个插件 |
+| `/plugin update --all` | 更新所有插件 |
+| `/plugin list` | 列出已安装插件 |
+| `/plugin popular` | 查看热门插件 |
+| `/plugin recommended` | 查看推荐插件 |
+| `/plugin help` | 显示命令帮助 |
 
-## Plugin ID Format
+## 插件 ID 格式
 
-Plugin IDs follow the format: `username/plugin-name`
+插件 ID 格式为：`用户名/插件名`
 
-Examples:
+示例：
 - `nnbot/ai-chat`
 - `user/weather-plugin`
 - `admin/moderation`
 
-## Auto-Updates
+## 自动更新
 
-The marketplace plugin automatically checks for updates every 24 hours. When updates are available, you'll be notified in the chat.
+市场插件每 24 小时自动检查更新。有可用更新时，会在聊天中通知你。
 
-To disable auto-updates, you can unload the marketplace plugin:
+要禁用自动更新，可以卸载市场插件：
 ```
 /admin unload marketplace
 ```
 
-## Troubleshooting
+## 常见问题
 
-### Plugin Not Found
+### 找不到插件
 
-If you see "Plugin not found":
-- Check the plugin ID format (`username/plugin-name`)
-- Make sure the plugin exists in the marketplace
-- Try searching for the plugin first
+如果显示「插件未找到」：
+- 检查插件 ID 格式（`用户名/插件名`）
+- 确保插件存在于市场中
+- 尝试先搜索插件
 
-### Installation Failed
+### 安装失败
 
-If installation fails:
-- Check your internet connection
-- Verify the plugin file is valid
-- Check the error message for details
+如果安装失败：
+- 检查网络连接
+- 验证插件文件是否有效
+- 查看错误消息了解详情
 
-### Update Not Available
+### 没有可用更新
 
-If no update is available:
-- The plugin is already at the latest version
-- The marketplace may not have the latest version yet
+如果没有可用更新：
+- 插件已是最新版本
+- 市场可能还没有最新版本
 
-### Plugin Not Working
+### 插件不工作
 
-If a plugin isn't working after installation:
-1. Check if the plugin is enabled (`/plugin list`)
-2. Restart NNBot to reload plugins
-3. Check the plugin's documentation for configuration
+如果插件安装后不工作：
+1. 检查插件是否启用（`/plugin list`）
+2. 重启 NNBot 重新加载插件
+3. 查看插件文档了解配置要求
 
-## Getting Help
+## 获取帮助
 
-- **Documentation**: Check the plugin's README for specific instructions
-- **Issues**: Report issues on the plugin's repository
-- **Support**: Ask for help in the NNBot community
+- **文档**：查看插件的 README 了解具体说明
+- **问题**：在插件仓库中报告问题
+- **支持**：在 NNBot 社区寻求帮助
 
-## For Developers
+## 开发者指南
 
-Want to publish your own plugin? See the [Developer Guide](development.md) for instructions on:
-- Creating plugins
-- Testing plugins
-- Publishing to the marketplace
-- Best practices
+想发布自己的插件？请参阅[开发者指南](development.md)，了解：
+- 创建插件
+- 测试插件
+- 发布到市场
+- 最佳实践

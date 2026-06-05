@@ -1,106 +1,106 @@
-# Plugin Development Guide
+# 插件开发指南
 
-This guide explains how to create, test, and publish plugins for the NNBot Plugin Marketplace.
+本指南介绍如何为 NNBot 插件市场创建、测试和发布插件。
 
-## Getting Started
+## 快速开始
 
-### Prerequisites
+### 环境要求
 
 - Node.js 18+
-- NNBot instance running
-- GitHub account (for publishing)
+- 运行中的 NNBot 实例
+- GitHub 账号（用于发布）
 
-### Plugin Structure
+### 插件结构
 
-A basic plugin looks like this:
+一个基本的插件如下：
 
 ```javascript
 // my-plugin.js
 export default {
   name: 'my-plugin',
-  description: 'A simple plugin',
+  description: '一个简单的插件',
   version: '1.0.0',
 
   async handle(event, services) {
-    // Handle the event
+    // 处理事件
     if (event.message === '/hello') {
-      return { content: 'Hello, World!' };
+      return { content: '你好，世界！' };
     }
-    return null; // Let other plugins handle this event
+    return null; // 让其他插件处理此事件
   }
 };
 ```
 
-### Plugin Interface
+### 插件接口
 
 ```typescript
 interface PluginDefinition {
-  // Required
-  name: string;                    // Plugin name (lowercase, hyphens)
-  handle(event, services): Response | null;  // Event handler
+  // 必需
+  name: string;                    // 插件名称（小写，连字符）
+  handle(event, services): Response | null;  // 事件处理函数
 
-  // Optional
-  description?: string;            // Plugin description
-  version?: string;                // Version (semver)
-  priority?: number;               // Execution priority (lower = earlier)
-  help?: string | (() => string);  // Help text
-  hooks?: AIChatHooks;             // AI chat hooks
-  onLoad?(services): Promise<void>;    // Lifecycle: loaded
-  onUnload?(): Promise<void>;          // Lifecycle: unloaded
+  // 可选
+  description?: string;            // 插件描述
+  version?: string;                // 版本号（语义化版本）
+  priority?: number;               // 执行优先级（数字越小越先执行）
+  help?: string | (() => string);  // 帮助文本
+  hooks?: AIChatHooks;             // AI 对话钩子
+  onLoad?(services): Promise<void>;    // 生命周期：加载时
+  onUnload?(): Promise<void>;          // 生命周期：卸载时
 }
 ```
 
-### Event Object
+### 事件对象
 
 ```typescript
 interface Event {
-  readonly type: EventType;        // PRIVATE_MESSAGE or GROUP_MESSAGE
-  readonly userId: string;         // User ID
-  readonly nickname: string;       // User nickname
-  readonly groupId: string | null; // Group ID (null for private messages)
+  readonly type: EventType;        // PRIVATE_MESSAGE 或 GROUP_MESSAGE
+  readonly userId: string;         // 用户 ID
+  readonly nickname: string;       // 用户昵称
+  readonly groupId: string | null; // 群组 ID（私聊为 null）
   readonly groupName: string | null;
-  readonly message: string;        // Message content
-  readonly timestamp: number;      // Unix timestamp
-  readonly raw: Record<string, unknown>; // Raw event data
+  readonly message: string;        // 消息内容
+  readonly timestamp: number;      // Unix 时间戳
+  readonly raw: Record<string, unknown>; // 原始事件数据
 }
 ```
 
-### Response Object
+### 响应对象
 
 ```typescript
 interface Response {
-  readonly content: string;        // Reply content
-  readonly replyTo?: boolean;      // Quote the original message
-  readonly atSender?: boolean;     // @ the sender
-  readonly extra?: Record<string, unknown>; // Extra data
+  readonly content: string;        // 回复内容
+  readonly replyTo?: boolean;      // 引用原消息
+  readonly atSender?: boolean;     // @ 发送者
+  readonly extra?: Record<string, unknown>; // 额外数据
 }
 ```
 
-### Services Object
+### 服务对象
 
 ```typescript
 interface PluginServices {
-  readonly llm: ILLMService;           // LLM service
-  readonly storage: IStorage;          // Storage service
-  readonly config: Config;             // Configuration
-  readonly pluginManager: IPluginManager; // Plugin manager
-  readonly hooks: AIChatHooks;         // AI chat hooks
-  readonly toolRegistry: IToolRegistry; // Tool registry
-  readonly providers: ProviderManager; // Provider manager
+  readonly llm: ILLMService;           // LLM 服务
+  readonly storage: IStorage;          // 存储服务
+  readonly config: Config;             // 配置
+  readonly pluginManager: IPluginManager; // 插件管理器
+  readonly hooks: AIChatHooks;         // AI 对话钩子
+  readonly toolRegistry: IToolRegistry; // 工具注册表
+  readonly providers: ProviderManager; // 供应商管理器
 }
 ```
 
-## Creating a Plugin
+## 创建插件
 
-### Step 1: Create the Plugin File
+### 第一步：创建插件文件
 
-Create a new `.js` file in your project:
+在你的项目中创建一个新的 `.js` 文件：
 
 ```javascript
 // weather-plugin.js
 export default {
   name: 'weather',
-  description: 'Get weather information',
+  description: '获取天气信息',
   version: '1.0.0',
 
   async handle(event, services) {
@@ -110,51 +110,51 @@ export default {
 
     const city = event.message.replace('/weather', '').trim();
     if (!city) {
-      return { content: 'Usage: /weather <city>' };
+      return { content: '用法：/weather <城市>' };
     }
 
-    // Fetch weather data
+    // 获取天气数据
     try {
       const weather = await getWeather(city);
       return {
-        content: `🌤️ Weather in ${city}: ${weather.temp}°C, ${weather.condition}`
+        content: `🌤️ ${city}天气：${weather.temp}°C，${weather.condition}`
       };
     } catch (err) {
-      return { content: `❌ Failed to get weather: ${err.message}` };
+      return { content: `❌ 获取天气失败：${err.message}` };
     }
   }
 };
 
 async function getWeather(city) {
-  // Implementation here
-  return { temp: 20, condition: 'Sunny' };
+  // 实现代码
+  return { temp: 20, condition: '晴' };
 }
 ```
 
-### Step 2: Test the Plugin
+### 第二步：测试插件
 
-1. Copy the plugin file to your NNBot `plugins/` directory
-2. Restart NNBot or use `/admin reload`
-3. Test the plugin in chat
+1. 将插件文件复制到 NNBot 的 `plugins/` 目录
+2. 重启 NNBot 或使用 `/admin reload`
+3. 在聊天中测试插件
 
-### Step 3: Add Help Text
+### 第三步：添加帮助文本
 
 ```javascript
 export default {
   name: 'weather',
-  description: 'Get weather information',
+  description: '获取天气信息',
   version: '1.0.0',
 
   help() {
     return `
-🌤️ Weather Plugin
+🌤️ 天气插件
 
-Commands:
-  /weather <city>    Get weather for a city
+命令：
+  /weather <城市>    获取指定城市的天气
 
-Examples:
-  /weather Beijing
-  /weather Tokyo
+示例：
+  /weather 北京
+  /weather 东京
     `.trim();
   },
 
@@ -164,51 +164,51 @@ Examples:
 };
 ```
 
-## Advanced Features
+## 高级功能
 
-### Using AI Chat Hooks
+### 使用 AI 对话钩子
 
-Hooks allow you to intercept and modify AI chat behavior:
+钩子允许你拦截和修改 AI 对话行为：
 
 ```javascript
 export default {
   name: 'context-enhancer',
-  description: 'Enhance AI context with custom data',
+  description: '使用自定义数据增强 AI 上下文',
   version: '1.0.0',
 
   hooks: {
     async beforeLLM(messages, event) {
-      // Add custom context before LLM call
+      // 在 LLM 调用前添加自定义上下文
       const context = await getCustomContext(event.userId);
       return [
         ...messages,
-        { role: 'system', content: `User context: ${context}` }
+        { role: 'system', content: `用户上下文：${context}` }
       ];
     },
 
     async afterLLM(response, event) {
-      // Modify response after LLM call
-      return response.replace(/bad words/gi, '***');
+      // 在 LLM 调用后修改响应
+      return response.replace(/敏感词/gi, '***');
     }
   }
 };
 ```
 
-### Using Storage
+### 使用存储服务
 
 ```javascript
 export default {
   name: 'counter',
-  description: 'Count user messages',
+  description: '统计用户消息数',
   version: '1.0.0',
 
   async handle(event, services) {
     if (event.message === '/count') {
       const count = await services.storage.get(`count:${event.userId}`) || 0;
-      return { content: `You've sent ${count} messages.` };
+      return { content: `你已发送 ${count} 条消息。` };
     }
 
-    // Increment counter
+    // 增加计数器
     const count = await services.storage.get(`count:${event.userId}`) || 0;
     await services.storage.set(`count:${event.userId}`, count + 1);
     return null;
@@ -216,12 +216,12 @@ export default {
 };
 ```
 
-### Using LLM Service
+### 使用 LLM 服务
 
 ```javascript
 export default {
   name: 'summarizer',
-  description: 'Summarize text using AI',
+  description: '使用 AI 总结文本',
   version: '1.0.0',
 
   async handle(event, services) {
@@ -231,35 +231,35 @@ export default {
 
     const text = event.message.replace('/summarize', '').trim();
     if (!text) {
-      return { content: 'Usage: /summarize <text>' };
+      return { content: '用法：/summarize <文本>' };
     }
 
     const summary = await services.llm.chat([
-      { role: 'system', content: 'Summarize the following text in one sentence.' },
+      { role: 'system', content: '用一句话总结以下文本。' },
       { role: 'user', content: text }
     ]);
 
-    return { content: `📝 Summary: ${summary}` };
+    return { content: `📝 摘要：${summary}` };
   }
 };
 ```
 
-## Best Practices
+## 最佳实践
 
-### 1. Handle Errors Gracefully
+### 1. 优雅地处理错误
 
 ```javascript
 async handle(event, services) {
   try {
-    // Your code here
+    // 你的代码
   } catch (err) {
-    console.error('Plugin error:', err);
-    return { content: '❌ An error occurred. Please try again.' };
+    console.error('插件错误：', err);
+    return { content: '❌ 发生错误，请重试。' };
   }
 }
 ```
 
-### 2. Validate Input
+### 2. 验证输入
 
 ```javascript
 async handle(event, services) {
@@ -269,154 +269,154 @@ async handle(event, services) {
 
   const args = event.message.split(/\s+/).slice(1);
   if (args.length === 0) {
-    return { content: 'Usage: /mycommand <arg>' };
+    return { content: '用法：/mycommand <参数>' };
   }
 
-  // Process valid input
+  // 处理有效输入
 }
 ```
 
-### 3. Use Early Return
+### 3. 使用提前返回
 
 ```javascript
 async handle(event, services) {
-  // Skip non-matching events early
+  // 提前跳过不匹配的事件
   if (!event.message.startsWith('/mycommand')) {
     return null;
   }
 
-  // Main logic here
+  // 主逻辑
 }
 ```
 
-### 4. Keep It Simple
+### 4. 保持简单
 
-- One plugin = one feature
-- Avoid complex state management
-- Use storage for persistence
+- 一个插件 = 一个功能
+- 避免复杂的状态管理
+- 使用存储服务进行持久化
 
-### 5. Document Your Plugin
+### 5. 文档化你的插件
 
 ```javascript
 export default {
   name: 'my-plugin',
-  description: 'Clear description of what the plugin does',
+  description: '清晰描述插件的功能',
   version: '1.0.0',
 
   help() {
     return `
-My Plugin
+我的插件
 
-Commands:
-  /mycommand <arg>    Description of command
+命令：
+  /mycommand <参数>    命令描述
 
-Examples:
+示例：
   /mycommand hello
     `.trim();
   }
 };
 ```
 
-## Publishing to Marketplace
+## 发布到市场
 
-### Step 1: Prepare Your Plugin
+### 第一步：准备你的插件
 
-- [ ] Plugin has a unique name
-- [ ] Plugin has a description
-- [ ] Plugin has a version (semver)
-- [ ] Plugin has help text
-- [ ] Plugin handles errors gracefully
-- [ ] Plugin is tested
+- [ ] 插件有唯一的名称
+- [ ] 插件有描述
+- [ ] 插件有版本号（语义化版本）
+- [ ] 插件有帮助文本
+- [ ] 插件优雅地处理错误
+- [ ] 插件已测试
 
-### Step 2: Create a GitHub Repository
+### 第二步：创建 GitHub 仓库
 
-1. Create a new repository on GitHub
-2. Add your plugin file(s)
-3. Add a README.md with usage instructions
-4. Create a release with the plugin file
+1. 在 GitHub 上创建新仓库
+2. 添加插件文件
+3. 添加 README.md 说明用法
+4. 创建包含插件文件的 Release
 
-### Step 3: Publish via Web UI
+### 第三步：通过 WebUI 发布
 
-1. Visit the marketplace Web UI
-2. Click "Publish" in the navigation
-3. Fill in the plugin information
-4. Upload your plugin file
-5. Click "Publish"
+1. 访问市场 WebUI
+2. 点击「发布插件」
+3. 填写插件信息
+4. 上传插件文件
+5. 点击「发布」
 
-### Step 4: Publish via API
+### 第四步：通过 API 发布
 
 ```bash
-# Create plugin
+# 创建插件
 curl -X POST http://localhost:3001/api/plugins \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "my-plugin",
-    "displayName": "My Plugin",
-    "description": "A great plugin",
+    "displayName": "我的插件",
+    "description": "一个很棒的插件",
     "category": "tools"
   }'
 
-# Publish version
+# 发布版本
 curl -X POST http://localhost:3001/api/plugins/myuser/my-plugin/versions \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -F "version=1.0.0" \
   -F "file=@my-plugin.js" \
-  -F "changelog=Initial release"
+  -F "changelog=首次发布"
 ```
 
-## Security Considerations
+## 安全考虑
 
-### What's Allowed
+### 允许的操作
 
-- ✅ Using LLM service
-- ✅ Using storage service
-- ✅ Making HTTP requests (fetch/axios)
-- ✅ Using npm packages (if bundled)
+- ✅ 使用 LLM 服务
+- ✅ 使用存储服务
+- ✅ 发起 HTTP 请求（fetch/axios）
+- ✅ 使用 npm 包（如果已打包）
 
-### What's Not Allowed
+### 禁止的操作
 
-- ❌ `eval()` or `new Function()`
-- ❌ File system access (`fs` module)
-- ❌ Child process execution
-- ❌ Accessing `process.env`
-- ❌ Modifying global state
+- ❌ `eval()` 或 `new Function()`
+- ❌ 文件系统访问（`fs` 模块）
+- ❌ 子进程执行
+- ❌ 访问 `process.env`
+- ❌ 修改全局状态
 
-### Security Scanning
+### 安全扫描
 
-Your plugin will be automatically scanned for security issues before publishing. The scanner checks for:
+发布前，你的插件会自动进行安全扫描。扫描器会检查：
 
-- Dangerous code patterns
-- Malicious behavior
-- Permission violations
+- 危险代码模式
+- 恶意行为
+- 权限违规
 
-If the scan fails, you'll need to fix the issues before publishing.
+如果扫描失败，你需要修复问题后才能发布。
 
-## Example Plugins
+## 示例插件
 
-### Simple Command Plugin
+### 简单命令插件
 
 ```javascript
 export default {
   name: 'hello',
-  description: 'Say hello',
+  description: '打招呼',
   version: '1.0.0',
 
   async handle(event) {
     if (event.message === '/hello') {
-      return { content: `Hello, ${event.nickname}! 👋` };
+      return { content: `你好，${event.nickname}！👋` };
     }
     return null;
   }
 };
 ```
 
-### API Integration Plugin
+### API 集成插件
 
 ```javascript
 export default {
   name: 'joke',
-  description: 'Get random jokes',
+  description: '获取随机笑话',
   version: '1.0.0',
 
   async handle(event) {
@@ -429,18 +429,18 @@ export default {
       const joke = await response.json();
       return { content: `${joke.setup}\n\n${joke.punchline}` };
     } catch (err) {
-      return { content: '❌ Failed to fetch joke' };
+      return { content: '❌ 获取笑话失败' };
     }
   }
 };
 ```
 
-### AI-Powered Plugin
+### AI 驱动的插件
 
 ```javascript
 export default {
   name: 'translator',
-  description: 'Translate text using AI',
+  description: '使用 AI 翻译文本',
   version: '1.0.0',
 
   async handle(event, services) {
@@ -450,22 +450,22 @@ export default {
 
     const text = event.message.replace('/translate', '').trim();
     if (!text) {
-      return { content: 'Usage: /translate <text>' };
+      return { content: '用法：/translate <文本>' };
     }
 
     const translation = await services.llm.chat([
-      { role: 'system', content: 'Translate the following text to English.' },
+      { role: 'system', content: '将以下文本翻译成英文。' },
       { role: 'user', content: text }
     ]);
 
-    return { content: `🌐 Translation: ${translation}` };
+    return { content: `🌐 翻译：${translation}` };
   }
 };
 ```
 
-## Getting Help
+## 获取帮助
 
-- **Documentation**: Check this guide and the API documentation
-- **Examples**: Look at existing plugins in the marketplace
-- **Community**: Ask for help in the NNBot community
-- **Issues**: Report bugs on GitHub
+- **文档**：查阅本指南和 API 文档
+- **示例**：查看市场中的现有插件
+- **社区**：在 NNBot 社区寻求帮助
+- **问题**：在 GitHub 上报告 Bug
