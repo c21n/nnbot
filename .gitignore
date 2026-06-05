@@ -51,3 +51,8 @@ CLAUDE.md
 .npmignore
 config.example.yaml
 .env.example
+
+# Claude Code
+.agents/
+.claude/
+skills-lock.json
