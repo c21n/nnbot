@@ -56,3 +56,4 @@ config.example.yaml
 .agents/
 .claude/
 skills-lock.json
+marketplace-server/
