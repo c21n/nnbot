@@ -67,6 +67,14 @@ export default createPlugin({
 - **多模型支持** - 文本、视觉、语音、嵌入分类配置
 - **调试工具** - 查看日志、测试对话、监控状态
 
+### 🛒 插件市场
+
+- **在线浏览** - 搜索、分类、热门、推荐插件
+- **一键安装** - 从市场直接安装插件到本地
+- **版本管理** - 查看历史版本、更新日志
+- **安全扫描** - 自动检测危险代码模式
+- **GitHub 集成** - 使用 GitHub OAuth 登录和发布
+
 ## 🚀 快速开始
 
 ### 环境要求
@@ -203,6 +211,53 @@ export default createPlugin({
 ```
 
 内置优先级：`RULE_MATCH(10)` > `ADMIN(20)` > `AI_CHAT(100)` > `MEMORY(110)`
+
+## 🛒 插件市场使用指南
+
+### 通过 WebUI 访问
+
+1. 启动 NNBot 后访问 WebUI：`http://localhost:8080`
+2. 点击侧边栏「插件市场」
+3. 浏览、搜索、安装插件
+
+### 通过命令行使用
+
+```bash
+# 搜索插件
+/plugin search 关键词
+
+# 查看插件详情
+/plugin info 作者/插件名
+
+# 安装插件
+/plugin install 作者/插件名
+
+# 更新插件
+/plugin update 作者/插件名
+
+# 卸载插件
+/plugin uninstall 作者/插件名
+
+# 查看已安装插件
+/plugin list
+
+# 查看热门插件
+/plugin popular
+
+# 查看推荐插件
+/plugin recommended
+```
+
+### 发布插件
+
+1. 创建 GitHub 仓库存放插件
+2. 在 WebUI 中点击「发布插件」
+3. 填写插件信息并上传
+4. 通过安全扫描后自动发布
+
+### 部署市场服务器
+
+详见 [marketplace-server/DEPLOY.md](marketplace-server/DEPLOY.md)
 
 ## 📸 多模态使用指南
 
@@ -475,29 +530,19 @@ nnbot/
 │   │   ├── memory.ts          # 记忆系统插件
 │   │   ├── multimodal.ts      # 多模态消息处理插件
 │   │   └── tools.ts           # 工具注册插件
+│   ├── marketplace/           # 插件市场客户端
+│   │   ├── client.ts          # HTTP 客户端
+│   │   ├── installer.ts       # 插件安装器
+│   │   ├── updater.ts         # 插件更新器
+│   │   ├── commands.ts        # /plugin 命令处理
+│   │   └── plugin.ts          # 市场插件入口
 │   ├── multimodal/            # 多模态模块
 │   │   ├── types/             # 类型定义
-│   │   │   ├── multimodal.types.ts  # 核心多模态类型
-│   │   │   ├── stt.types.ts   # STT 服务类型
-│   │   │   ├── vision.types.ts # 视觉 LLM 类型
-│   │   │   └── storage.types.ts # 媒体存储类型
 │   │   ├── services/          # 服务实现
-│   │   │   ├── multimodal-processor.ts  # 多模态处理器
-│   │   │   ├── vision-llm-adapter.ts    # 视觉 LLM 适配器
-│   │   │   ├── whisper-service.ts       # Whisper STT 服务
-│   │   │   ├── local-stt-service.ts     # 本地 STT 服务
-│   │   │   ├── stt-factory.ts           # STT 服务工厂
-│   │   │   └── media-storage.ts         # 媒体存储服务
 │   │   └── index.ts           # 模块导出
 │   ├── services/
-│   │   ├── llm/
-│   │   │   └── openai.ts      # OpenAI 兼容 LLM 服务
+│   │   ├── llm/               # LLM 服务
 │   │   └── tools/             # 工具调用系统
-│   │       ├── types.ts       # ITool, IToolFactory, IToolRegistry
-│   │       ├── tool-registry.ts # 渐进式披露注册表
-│   │       ├── tool-executor.ts # 工具执行器
-│   │       ├── tool-loop.ts   # 工具调用循环
-│   │       └── builtin/       # 内置工具
 │   ├── memory/                # 记忆系统模块
 │   │   ├── storage/           # 存储层（SQLite + Vectra）
 │   │   ├── services/          # 业务服务
@@ -509,6 +554,16 @@ nnbot/
 │       ├── config-api.ts      # 配置管理 API
 │       ├── memory-api.ts      # 记忆管理 API
 │       └── public/            # 前端静态资源
+├── marketplace-server/        # 插件市场服务器
+│   ├── src/
+│   │   ├── server.ts          # Fastify 服务器入口
+│   │   ├── api/               # REST API 路由
+│   │   ├── auth/              # GitHub OAuth + JWT
+│   │   ├── services/          # 业务服务
+│   │   ├── db/                # PostgreSQL 连接 + 迁移
+│   │   └── types/             # 类型定义
+│   ├── package.json
+│   └── tsconfig.json
 ├── config.yaml                # 配置文件
 ├── package.json
 └── tsconfig.json
@@ -534,12 +589,13 @@ nnbot/
 - [x] WebUI 管理界面
 - [x] 多 LLM Provider 支持
 - [x] 多模态支持 - 图片、语音处理
+- [x] 插件市场 - 在线浏览、安装、发布插件
 
 ### v0.2.0 (计划中)
-- [ ] 插件市场 - 社区插件分享
 - [ ] 搜索结果缓存 - 相同查询不重复调用 API
 - [ ] 性能监控 - Prometheus 指标
 - [ ] 更多 STT 服务 - 讯飞、百度等
+- [ ] 插件评分和评论
 
 ### v0.3.0 (未来)
 - [ ] 分布式部署 - 多实例协同
