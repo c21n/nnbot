@@ -76,6 +76,29 @@ export interface ITool {
 }
 
 /**
+ * Tool factory interface
+ *
+ * Declarative description of tool capabilities with lazy instantiation.
+ * Tools are only created when a message matches their keywords.
+ */
+export interface IToolFactory {
+  /** Tool name (must match ITool.name after creation) */
+  readonly name: string;
+
+  /** Tool description (for logging and debugging) */
+  readonly description: string;
+
+  /** Capability tags for categorization: "search", "math", "code" */
+  readonly tags: string[];
+
+  /** Trigger keywords for message matching: "搜索", "计算" */
+  readonly keywords: string[];
+
+  /** Create tool instance (executed on first match, cached thereafter) */
+  create(): ITool | Promise<ITool>;
+}
+
+/**
  * Tool registry interface
  */
 export interface IToolRegistry {
@@ -85,7 +108,28 @@ export interface IToolRegistry {
   getActiveTools(): ITool[];
   getOpenAISchemas(): OpenAIToolSchema[];
   getAnthropicSchemas(): AnthropicToolSchema[];
+
+  /** Register a tool factory (declarative directory, no instantiation) */
+  registerFactory(factory: IToolFactory): void;
+
+  /** Get tools matching message intent (lazy instantiation + caching) */
+  getToolsForIntent(message: string): Promise<ITool[]>;
 }
+
+/**
+ * Global exclude patterns
+ *
+ * Messages matching these patterns return empty array immediately.
+ * Replaces NO_SEARCH_PATTERNS from tool-filter.ts.
+ */
+export const GLOBAL_EXCLUDE_PATTERNS: RegExp[] = [
+  /^(你好|hi|hello|hey|嗨|早|晚|下午好|晚上好|早上好)/i,
+  /^(good\s*(morning|afternoon|evening|night))/i,
+  /^(谢谢|感谢|辛苦|好的|嗯|哦|哈哈)/,
+  /^(thanks|thank|ok|okay|haha|lol)/i,
+  /^(写|创作|编|画|设计)(?!.*[搜查找])/,
+  /^(write|create|make|draw|design)(?!.*search)/i,
+];
 
 // ============ LLM Tool Call ============
 

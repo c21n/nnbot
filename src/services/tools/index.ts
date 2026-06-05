@@ -10,6 +10,7 @@ export type {
   ToolResult,
   ToolContext,
   ITool,
+  IToolFactory,
   IToolRegistry,
   LLMToolCall,
   LLMResponse,
@@ -17,6 +18,9 @@ export type {
   OpenAIToolSchema,
   AnthropicToolSchema,
 } from "./types.js";
+
+// Constants
+export { GLOBAL_EXCLUDE_PATTERNS } from "./types.js";
 
 // Core modules
 export { ToolRegistry, toolRegistry } from "./tool-registry.js";
