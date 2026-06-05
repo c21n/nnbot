@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plugin Marketplace - NNBot</title>
+  <link rel="stylesheet" href="css/marketplace.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <div class="header-title">
+        <span>📦</span>
+        <span>Plugin Marketplace</span>
+      </div>
+      <nav class="header-nav">
+        <a href="index.html" class="active">Marketplace</a>
+        <a href="installed.html">Installed</a>
+        <a href="publish.html">Publish</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container">
+    <!-- Search -->
+    <section class="search-container">
+      <div class="search-box">
+        <input type="text" class="search-input" id="searchInput" placeholder="Search plugins...">
+        <button class="search-btn" id="searchBtn">Search</button>
+      </div>
+    </section>
+
+    <!-- Categories -->
+    <section class="categories" id="categories">
+      <span class="category-tag active" data-category="">All</span>
+      <span class="category-tag" data-category="ai">AI</span>
+      <span class="category-tag" data-category="tools">Tools</span>
+      <span class="category-tag" data-category="chat">Chat</span>
+      <span class="category-tag" data-category="utility">Utility</span>
+      <span class="category-tag" data-category="integration">Integration</span>
+    </section>
+
+    <!-- Search Results -->
+    <section id="searchResults" style="display: none;">
+      <h2 class="section-title">🔍 Search Results</h2>
+      <div class="plugins-grid" id="searchResultsGrid"></div>
+      <div class="pagination" id="searchPagination"></div>
+    </section>
+
+    <!-- Popular Plugins -->
+    <section id="popularSection">
+      <h2 class="section-title">🔥 Popular Plugins</h2>
+      <div class="plugins-grid" id="popularGrid">
+        <div class="loading">
+          <div class="spinner"></div>
+          <span>Loading popular plugins...</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Recommended Plugins -->
+    <section id="recommendedSection">
+      <h2 class="section-title">⭐ Recommended Plugins</h2>
+      <div class="plugins-grid" id="recommendedGrid">
+        <div class="loading">
+          <div class="spinner"></div>
+          <span>Loading recommended plugins...</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Scripts -->
+  <script src="js/api.js"></script>
+  <script>
+    // DOM Elements
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const categoriesContainer = document.getElementById('categories');
+    const searchResults = document.getElementById('searchResults');
+    const searchResultsGrid = document.getElementById('searchResultsGrid');
+    const searchPagination = document.getElementById('searchPagination');
+    const popularGrid = document.getElementById('popularGrid');
+    const recommendedGrid = document.getElementById('recommendedGrid');
+    const toastContainer = document.getElementById('toastContainer');
+
+    // State
+    let currentCategory = '';
+    let currentPage = 1;
+
+    // Show toast notification
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.textContent = message;
+      toastContainer.appendChild(toast);
+
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+
+    // Format number
+    function formatNumber(num) {
+      if (num >= 1000000) {
+        return (num / 1000000).toFixed(1) + 'M';
+      }
+      if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'K';
+      }
+      return num.toString();
+    }
+
+    // Create plugin card HTML
+    function createPluginCard(plugin) {
+      return `
+        <div class="plugin-card" onclick="window.location.href='plugin.html?id=${encodeURIComponent(plugin.id)}'">
+          <div class="plugin-card-header">
+            <div class="plugin-icon">${plugin.icon || '📦'}</div>
+            <div class="plugin-info">
+              <div class="plugin-name">${plugin.displayName}</div>
+              <div class="plugin-author">by ${plugin.author}</div>
+            </div>
+          </div>
+          <div class="plugin-description">${plugin.description || 'No description'}</div>
+          <div class="plugin-meta">
+            <span>v${plugin.version}</span>
+            <div class="plugin-stats">
+              <span class="plugin-stat">⬇️ ${formatNumber(plugin.downloads)}</span>
+              <span class="plugin-stat">⭐ ${plugin.rating.toFixed(1)}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Render plugins grid
+    function renderPlugins(container, plugins) {
+      if (plugins.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📭</div>
+            <div class="empty-state-text">No plugins found</div>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = plugins.map(createPluginCard).join('');
+    }
+
+    // Search plugins
+    async function searchPlugins(query, page = 1) {
+      try {
+        searchResults.style.display = 'block';
+        searchResultsGrid.innerHTML = `
+          <div class="loading">
+            <div class="spinner"></div>
+            <span>Searching...</span>
+          </div>
+        `;
+
+        const plugins = await MarketplaceAPI.searchPlugins(query, {
+          category: currentCategory,
+          page,
+          limit: 12,
+        });
+
+        renderPlugins(searchResultsGrid, plugins);
+
+        // Update pagination
+        // TODO: Implement pagination based on API response
+      } catch (err) {
+        showToast('Search failed: ' + err.message, 'error');
+      }
+    }
+
+    // Load popular plugins
+    async function loadPopularPlugins() {
+      try {
+        const plugins = await MarketplaceAPI.getPopularPlugins(8);
+        renderPlugins(popularGrid, plugins);
+      } catch (err) {
+        popularGrid.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">⚠️</div>
+            <div class="empty-state-text">Failed to load popular plugins</div>
+          </div>
+        `;
+      }
+    }
+
+    // Load recommended plugins
+    async function loadRecommendedPlugins() {
+      try {
+        const plugins = await MarketplaceAPI.getRecommendedPlugins(8);
+        renderPlugins(recommendedGrid, plugins);
+      } catch (err) {
+        recommendedGrid.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">⚠️</div>
+            <div class="empty-state-text">Failed to load recommended plugins</div>
+          </div>
+        `;
+      }
+    }
+
+    // Event Listeners
+    searchBtn.addEventListener('click', () => {
+      const query = searchInput.value.trim();
+      if (query) {
+        searchPlugins(query);
+      }
+    });
+
+    searchInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        const query = searchInput.value.trim();
+        if (query) {
+          searchPlugins(query);
+        }
+      }
+    });
+
+    categoriesContainer.addEventListener('click', (e) => {
+      if (e.target.classList.contains('category-tag')) {
+        // Update active state
+        categoriesContainer.querySelectorAll('.category-tag').forEach(tag => {
+          tag.classList.remove('active');
+        });
+        e.target.classList.add('active');
+
+        // Update category
+        currentCategory = e.target.dataset.category;
+
+        // Search if query exists
+        const query = searchInput.value.trim();
+        if (query) {
+          searchPlugins(query);
+        }
+      }
+    });
+
+    // Initialize
+    loadPopularPlugins();
+    loadRecommendedPlugins();
+  </script>
+</body>
+</html>

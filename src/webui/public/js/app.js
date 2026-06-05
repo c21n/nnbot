@@ -120,6 +120,13 @@ function registerRoutes() {
   router.register('settings', () => {
     initSettings(config);
   });
+
+  router.register('marketplace', () => {
+    // Initialize marketplace when page is activated
+    if (window._marketplace && window._marketplace.init) {
+      window._marketplace.init();
+    }
+  });
 }
 
 // ── Load Config ──
@@ -144,6 +151,9 @@ async function loadConfig() {
     else if (page === 'search') initSearch(config);
     else if (page === 'admin') initAdmin(config);
     else if (page === 'settings') renderSettings(config);
+    else if (page === 'marketplace' && window._marketplace) {
+      window._marketplace.init();
+    }
 
     // Update header status
     const statusEl = document.getElementById('header-status');

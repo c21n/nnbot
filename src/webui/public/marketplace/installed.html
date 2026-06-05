@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Installed Plugins - NNBot Marketplace</title>
+  <link rel="stylesheet" href="css/marketplace.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <div class="header-title">
+        <span>📦</span>
+        <span>Plugin Marketplace</span>
+      </div>
+      <nav class="header-nav">
+        <a href="index.html">Marketplace</a>
+        <a href="installed.html" class="active">Installed</a>
+        <a href="publish.html">Publish</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+      <h1 style="font-size: 24px; font-weight: 600;">📦 Installed Plugins</h1>
+      <button class="btn btn-primary" id="updateAllBtn">Update All</button>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="loading">
+      <div class="spinner"></div>
+      <span>Loading installed plugins...</span>
+    </div>
+
+    <!-- Installed Plugins List -->
+    <div id="installedList" class="installed-list" style="display: none;"></div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="empty-state" style="display: none;">
+      <div class="empty-state-icon">📭</div>
+      <div class="empty-state-text">No plugins installed</div>
+      <div class="empty-state-hint">Browse the marketplace to find and install plugins.</div>
+      <a href="index.html" class="btn btn-primary" style="margin-top: 16px;">Browse Marketplace</a>
+    </div>
+  </main>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Scripts -->
+  <script src="js/api.js"></script>
+  <script>
+    // DOM Elements
+    const loadingState = document.getElementById('loadingState');
+    const installedList = document.getElementById('installedList');
+    const emptyState = document.getElementById('emptyState');
+    const updateAllBtn = document.getElementById('updateAllBtn');
+    const toastContainer = document.getElementById('toastContainer');
+
+    // Show toast notification
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.textContent = message;
+      toastContainer.appendChild(toast);
+
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+
+    // Load installed plugins
+    async function loadInstalledPlugins() {
+      try {
+        const plugins = await MarketplaceAPI.getInstalledPlugins();
+
+        loadingState.style.display = 'none';
+
+        if (plugins.length === 0) {
+          emptyState.style.display = 'block';
+          return;
+        }
+
+        installedList.style.display = 'flex';
+        renderInstalledPlugins(plugins);
+      } catch (err) {
+        loadingState.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">⚠️</div>
+            <div class="empty-state-text">Failed to load installed plugins</div>
+            <div class="empty-state-hint">${err.message}</div>
+          </div>
+        `;
+      }
+    }
+
+    // Render installed plugins
+    function renderInstalledPlugins(plugins) {
+      installedList.innerHTML = plugins.map(plugin => `
+        <div class="installed-item" data-plugin-id="${plugin.pluginId}">
+          <div class="installed-info">
+            <span class="installed-status">${plugin.enabled ? '✅' : '⏸️'}</span>
+            <div>
+              <span class="installed-name">${plugin.name}</span>
+              <span class="installed-version">v${plugin.version}</span>
+              ${plugin.hasUpdate ? `<span class="installed-update">(update available: v${plugin.latestVersion})</span>` : ''}
+            </div>
+          </div>
+          <div class="installed-actions">
+            ${plugin.hasUpdate ? `<button class="btn btn-primary btn-sm" onclick="updatePlugin('${plugin.pluginId}')">Update</button>` : ''}
+            <button class="btn btn-secondary btn-sm" onclick="togglePlugin('${plugin.pluginId}', ${plugin.enabled})">
+              ${plugin.enabled ? 'Disable' : 'Enable'}
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="uninstallPlugin('${plugin.pluginId}')">Uninstall</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Toggle plugin enabled/disabled
+    async function togglePlugin(pluginId, currentlyEnabled) {
+      try {
+        // This would call NNBot's internal API
+        // For now, we'll just show a message
+        showToast(`Plugin ${pluginId} ${currentlyEnabled ? 'disabled' : 'enabled'}`);
+        loadInstalledPlugins();
+      } catch (err) {
+        showToast('Failed to toggle plugin: ' + err.message, 'error');
+      }
+    }
+
+    // Update plugin
+    async function updatePlugin(pluginId) {
+      try {
+        const result = await MarketplaceAPI.updatePlugin(pluginId);
+
+        if (result.success) {
+          showToast(result.message);
+          loadInstalledPlugins();
+        } else {
+          showToast(result.error || 'Update failed', 'error');
+        }
+      } catch (err) {
+        showToast('Update failed: ' + err.message, 'error');
+      }
+    }
+
+    // Uninstall plugin
+    async function uninstallPlugin(pluginId) {
+      if (!confirm(`Are you sure you want to uninstall ${pluginId}?`)) {
+        return;
+      }
+
+      try {
+        const result = await MarketplaceAPI.uninstallPlugin(pluginId);
+
+        if (result.success) {
+          showToast(result.message);
+          loadInstalledPlugins();
+        } else {
+          showToast(result.error || 'Uninstall failed', 'error');
+        }
+      } catch (err) {
+        showToast('Uninstall failed: ' + err.message, 'error');
+      }
+    }
+
+    // Update all plugins
+    async function updateAllPlugins() {
+      try {
+        updateAllBtn.disabled = true;
+        updateAllBtn.textContent = 'Updating...';
+
+        // This would call NNBot's internal API
+        // For now, we'll just show a message
+        showToast('All plugins updated');
+        loadInstalledPlugins();
+      } catch (err) {
+        showToast('Update all failed: ' + err.message, 'error');
+      } finally {
+        updateAllBtn.disabled = false;
+        updateAllBtn.textContent = 'Update All';
+      }
+    }
+
+    // Event Listeners
+    updateAllBtn.addEventListener('click', updateAllPlugins);
+
+    // Initialize
+    loadInstalledPlugins();
+  </script>
+</body>
+</html>

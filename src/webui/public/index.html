@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/pages.css">
+  <link rel="stylesheet" href="css/marketplace.css">
 </head>
 <body>
 
@@ -69,6 +70,10 @@
         <div class="sidebar-item" data-page="plugins" data-title="插件管理">
           <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
           <span>插件管理</span>
+        </div>
+        <div class="sidebar-item" data-page="marketplace" data-title="插件市场">
+          <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          <span>插件市场</span>
         </div>
       </div>
 
@@ -578,12 +583,167 @@
         </div>
       </div>
 
+      <!-- Marketplace Page -->
+      <div id="page-marketplace" class="page">
+        <!-- Marketplace Header -->
+        <div class="card" style="margin-bottom:var(--space-4)">
+          <div class="card-header">
+            <div>
+              <div class="card-title">📦 插件市场</div>
+              <div class="card-description">浏览、安装和管理 NNBot 插件</div>
+            </div>
+            <div style="display:flex;gap:var(--space-2)">
+              <button class="btn btn-sm btn-secondary" onclick="window._marketplace.showInstalled()">已安装插件</button>
+              <button class="btn btn-sm btn-primary" onclick="window._marketplace.showPublish()">发布插件</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Search -->
+        <div class="card" style="margin-bottom:var(--space-4)">
+          <div style="display:flex;gap:var(--space-3)">
+            <input id="marketplace-search" class="form-input" type="text" placeholder="搜索插件..." style="flex:1">
+            <button class="btn btn-primary" onclick="window._marketplace.search()">搜索</button>
+          </div>
+          <div id="marketplace-categories" style="display:flex;gap:var(--space-2);margin-top:var(--space-3);flex-wrap:wrap">
+            <span class="marketplace-category active" data-category="">全部</span>
+            <span class="marketplace-category" data-category="ai">AI</span>
+            <span class="marketplace-category" data-category="tools">工具</span>
+            <span class="marketplace-category" data-category="chat">聊天</span>
+            <span class="marketplace-category" data-category="utility">实用</span>
+            <span class="marketplace-category" data-category="integration">集成</span>
+          </div>
+        </div>
+
+        <!-- Popular Plugins -->
+        <div class="card" style="margin-bottom:var(--space-4)">
+          <div class="card-header">
+            <div class="card-title">🔥 热门插件</div>
+          </div>
+          <div id="marketplace-popular" class="marketplace-grid">
+            <div class="loading-overlay"><div class="spinner"></div></div>
+          </div>
+        </div>
+
+        <!-- Recommended Plugins -->
+        <div class="card" style="margin-bottom:var(--space-4)">
+          <div class="card-header">
+            <div class="card-title">⭐ 推荐插件</div>
+          </div>
+          <div id="marketplace-recommended" class="marketplace-grid">
+            <div class="loading-overlay"><div class="spinner"></div></div>
+          </div>
+        </div>
+
+        <!-- Search Results -->
+        <div id="marketplace-search-results" class="card" style="display:none;margin-bottom:var(--space-4)">
+          <div class="card-header">
+            <div class="card-title">🔍 搜索结果</div>
+          </div>
+          <div id="marketplace-results" class="marketplace-grid"></div>
+        </div>
+
+        <!-- Plugin Detail Modal -->
+        <div id="marketplace-detail-modal" class="modal" style="display:none">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2 id="marketplace-detail-title"></h2>
+              <button class="modal-close" onclick="window._marketplace.closeDetail()">&times;</button>
+            </div>
+            <div id="marketplace-detail-content" class="modal-body"></div>
+          </div>
+        </div>
+
+        <!-- Installed Plugins Modal -->
+        <div id="marketplace-installed-modal" class="modal" style="display:none">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2>已安装插件</h2>
+              <button class="modal-close" onclick="window._marketplace.closeInstalled()">&times;</button>
+            </div>
+            <div id="marketplace-installed-content" class="modal-body">
+              <div class="loading-overlay"><div class="spinner"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Publish Plugin Modal -->
+        <div id="marketplace-publish-modal" class="modal" style="display:none">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2>发布插件</h2>
+              <button class="modal-close" onclick="window._marketplace.closePublish()">&times;</button>
+            </div>
+            <div class="modal-body">
+              <form id="marketplace-publish-form">
+                <div class="form-group">
+                  <label class="form-label">插件名称 *</label>
+                  <input type="text" class="form-input" id="publish-name" placeholder="my-plugin" required pattern="[a-z0-9-]+">
+                  <div class="form-hint">小写字母、数字和连字符</div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">显示名称 *</label>
+                  <input type="text" class="form-input" id="publish-displayName" placeholder="My Plugin" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">描述</label>
+                  <textarea class="form-input form-textarea" id="publish-description" placeholder="插件描述"></textarea>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">分类</label>
+                    <select class="form-input form-select" id="publish-category">
+                      <option value="">选择分类</option>
+                      <option value="ai">AI</option>
+                      <option value="tools">工具</option>
+                      <option value="chat">聊天</option>
+                      <option value="utility">实用</option>
+                      <option value="integration">集成</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">许可证</label>
+                    <select class="form-input form-select" id="publish-license">
+                      <option value="">选择许可证</option>
+                      <option value="MIT">MIT</option>
+                      <option value="Apache-2.0">Apache 2.0</option>
+                      <option value="GPL-3.0">GPL 3.0</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">版本 *</label>
+                  <input type="text" class="form-input" id="publish-version" placeholder="1.0.0" required pattern="\d+\.\d+\.\d+">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">插件文件 *</label>
+                  <input type="file" class="form-input" id="publish-file" accept=".js" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">更新日志</label>
+                  <textarea class="form-input form-textarea" id="publish-changelog" placeholder="本次更新内容"></textarea>
+                </div>
+                <div style="display:flex;justify-content:flex-end;gap:var(--space-3);margin-top:var(--space-4)">
+                  <button type="button" class="btn btn-secondary" onclick="window._marketplace.closePublish()">取消</button>
+                  <button type="submit" class="btn btn-primary">发布</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </main>
 </div>
 
 <!-- App Entry Point -->
 <script type="module" src="js/app.js"></script>
+<script>
+  // 市场服务器地址（部署后修改为远程服务器地址）
+  window.MARKETPLACE_API_URL = 'http://46.62.246.153:3001';
+</script>
+<script src="js/marketplace.js"></script>
 
 </body>
 </html>
