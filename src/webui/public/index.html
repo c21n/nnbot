@@ -740,8 +740,8 @@
 <!-- App Entry Point -->
 <script type="module" src="js/app.js"></script>
 <script>
-  // 市场服务器地址（部署后修改为远程服务器地址）
-  window.MARKETPLACE_API_URL = 'http://46.62.246.153:3001';
+  // 市场服务器地址（可通过环境变量或配置文件设置）
+  window.MARKETPLACE_API_URL = window.MARKETPLACE_API_URL || 'http://localhost:3001';
 </script>
 <script src="js/marketplace.js"></script>
 

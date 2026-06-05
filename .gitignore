@@ -50,7 +50,6 @@ astrbot_plugin_livingmemory/
 CLAUDE.md
 .npmignore
 config.example.yaml
-.env.example
 
 # Claude Code
 .agents/
