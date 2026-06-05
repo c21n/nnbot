@@ -44,6 +44,14 @@ export default createPlugin({
 - **上下文管理** - 可配置的历史轮数和压缩阈值
 - **多 LLM 支持** - OpenAI、Ollama、SiliconFlow、DeepSeek 等
 
+### 📸 多模态支持
+
+- **图片理解** - 接收图片消息，使用视觉 LLM 进行内容理解
+- **语音转写** - 接收语音消息，使用 STT 服务转为文字
+- **可配置服务** - 支持 Whisper、本地 STT 等多种服务
+- **优雅降级** - 服务不可用时自动回退到纯文本模式
+- **媒体存储** - 可选存储原始媒体文件，支持自动清理
+
 ### 🛡️ 安全防护
 
 - **Prompt 注入防护** - 检测并阻止恶意 Prompt 注入
@@ -56,6 +64,7 @@ export default createPlugin({
 - **实时配置** - 通过 WebUI 修改配置，无需重启
 - **插件管理** - 启用/禁用插件，查看插件状态
 - **LLM 配置** - 一键获取模型列表，自动填充配置
+- **多模型支持** - 文本、视觉、语音、嵌入分类配置
 - **调试工具** - 查看日志、测试对话、监控状态
 
 ## 🚀 快速开始
@@ -109,6 +118,8 @@ start.bat
 | `rule_match` | 正则匹配自动回复 |
 | `admin` | 管理命令（/help, /status, /clear） |
 | `memory` | 长期记忆，基于向量检索 |
+| `multimodal` | 多模态消息处理（图片、语音） |
+| `tools` | 工具注册（计算器、搜索等） |
 
 ## 🔧 插件开发
 
@@ -193,6 +204,57 @@ export default createPlugin({
 
 内置优先级：`RULE_MATCH(10)` > `ADMIN(20)` > `AI_CHAT(100)` > `MEMORY(110)`
 
+## 📸 多模态使用指南
+
+### 图片理解
+
+当用户发送图片消息时，Bot 会自动：
+1. 提取图片数据（base64 或 URL）
+2. 发送给视觉 LLM 进行理解
+3. 返回图片描述和分析
+
+**配置要求：**
+- 启用 `multimodal.vision.enabled`
+- 配置支持视觉的 LLM 模型（如 GPT-4V、Claude Vision）
+
+### 语音转写
+
+当用户发送语音消息时，Bot 会自动：
+1. 提取音频数据
+2. 使用 STT 服务转为文字
+3. 将转写结果附加到消息中
+
+**配置要求：**
+- 启用 `multimodal.stt.enabled`
+- 配置 STT 服务（如 OpenAI Whisper）
+
+### 配置示例
+
+```yaml
+multimodal:
+  enabled: true
+  vision:
+    enabled: true
+  stt:
+    enabled: true
+    provider: whisper
+    whisper:
+      apiKey: ${OPENAI_API_KEY}
+      model: whisper-1
+  storage:
+    storeOriginal: false
+    path: data/media
+    maxFileSize: 10MB
+    retentionDays: 7
+```
+
+### 降级处理
+
+当服务不可用时，Bot 会自动降级：
+- 视觉 LLM 不可用 → 忽略图片，只处理文本
+- STT 服务不可用 → 忽略语音，只处理文本
+- 网络超时 → 跳过媒体处理，记录警告
+
 ## 📖 配置参考
 
 ### 完整配置示例
@@ -260,6 +322,23 @@ memory:
   embedding:
     provider: "siliconflow"
     apiKey: "sk-xxx"
+
+# 多模态配置（可选）
+multimodal:
+  enabled: true
+  vision:
+    enabled: true  # 启用视觉 LLM
+  stt:
+    enabled: true  # 启用语音转写
+    provider: whisper  # whisper | local
+    whisper:
+      apiKey: "sk-xxx"
+      model: "whisper-1"
+  storage:
+    storeOriginal: false  # 是否存储原始媒体文件
+    path: "data/media"
+    maxFileSize: "10MB"
+    retentionDays: 7
 ```
 
 ### 管理命令
@@ -394,7 +473,22 @@ nnbot/
 │   │   ├── rule-match.ts      # 规则匹配插件
 │   │   ├── admin.ts           # 管理命令插件
 │   │   ├── memory.ts          # 记忆系统插件
+│   │   ├── multimodal.ts      # 多模态消息处理插件
 │   │   └── tools.ts           # 工具注册插件
+│   ├── multimodal/            # 多模态模块
+│   │   ├── types/             # 类型定义
+│   │   │   ├── multimodal.types.ts  # 核心多模态类型
+│   │   │   ├── stt.types.ts   # STT 服务类型
+│   │   │   ├── vision.types.ts # 视觉 LLM 类型
+│   │   │   └── storage.types.ts # 媒体存储类型
+│   │   ├── services/          # 服务实现
+│   │   │   ├── multimodal-processor.ts  # 多模态处理器
+│   │   │   ├── vision-llm-adapter.ts    # 视觉 LLM 适配器
+│   │   │   ├── whisper-service.ts       # Whisper STT 服务
+│   │   │   ├── local-stt-service.ts     # 本地 STT 服务
+│   │   │   ├── stt-factory.ts           # STT 服务工厂
+│   │   │   └── media-storage.ts         # 媒体存储服务
+│   │   └── index.ts           # 模块导出
 │   ├── services/
 │   │   ├── llm/
 │   │   │   └── openai.ts      # OpenAI 兼容 LLM 服务
@@ -439,17 +533,19 @@ nnbot/
 - [x] 智能记忆系统
 - [x] WebUI 管理界面
 - [x] 多 LLM Provider 支持
+- [x] 多模态支持 - 图片、语音处理
 
 ### v0.2.0 (计划中)
 - [ ] 插件市场 - 社区插件分享
-- [ ] 多模态支持 - 图片、语音处理
 - [ ] 搜索结果缓存 - 相同查询不重复调用 API
 - [ ] 性能监控 - Prometheus 指标
+- [ ] 更多 STT 服务 - 讯飞、百度等
 
 ### v0.3.0 (未来)
 - [ ] 分布式部署 - 多实例协同
 - [ ] 插件沙箱 - 安全隔离执行
 - [ ] AI Agent - 自主任务执行
+- [ ] 视频处理 - 视频理解和生成
 
 ## 🤝 贡献
 
