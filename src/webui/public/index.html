@@ -375,7 +375,7 @@
   <nav class="sidebar">
     <div class="sidebar-item active" data-section="server">Server</div>
     <div class="sidebar-item" data-section="onebot">OneBot</div>
-    <div class="sidebar-item" data-section="llm">LLM</div>
+    <div class="sidebar-item" data-section="llm">Providers</div>
     <div class="sidebar-item" data-section="storage">Storage</div>
     <div class="sidebar-item" data-section="plugins">Plugins</div>
     <div class="sidebar-item" data-section="persona">Persona</div>
@@ -418,14 +418,54 @@
       </div>
     </div>
 
-    <!-- LLM -->
+    <!-- LLM / Providers -->
     <div id="sec-llm" class="section">
-      <h2>🧠 LLM</h2>
+      <h2>🧠 模型供应商 (Providers)</h2>
 
-      <div class="provider-bar">
-        <label style="font-size:13px;color:var(--text-dim);white-space:nowrap">当前供应商</label>
-        <select id="llm.currentProvider" onchange="switchProvider(this.value)"></select>
-        <button class="btn btn-sm btn-outline" onclick="addProvider()">+ 新增</button>
+      <div class="field-hint" style="margin-bottom:20px">
+        统一管理所有 LLM 和 Embedding 供应商。支持 OpenAI 兼容和 Ollama 两种格式。
+      </div>
+
+      <!-- Defaults -->
+      <div style="background:var(--input-bg);border:1px solid var(--input-border);border-radius:10px;padding:20px;margin-bottom:20px">
+        <h3 style="font-size:15px;margin-bottom:16px;color:var(--text-dim)">默认供应商</h3>
+        <div class="field-row">
+          <div class="field">
+            <label>默认 LLM</label>
+            <div style="display:flex;gap:8px">
+              <select id="providers.defaults.llm.providerId" style="flex:1;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
+                <option value="">-- 选择供应商 --</option>
+              </select>
+              <select id="providers.defaults.llm.modelId" style="flex:1;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
+                <option value="">-- 选择模型 --</option>
+              </select>
+            </div>
+            <div class="field-hint">用于 AI 对话的主要 LLM</div>
+          </div>
+          <div class="field">
+            <label>默认 Embedding</label>
+            <div style="display:flex;gap:8px">
+              <select id="providers.defaults.embedding.providerId" style="flex:1;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
+                <option value="">-- 选择供应商 --</option>
+              </select>
+              <select id="providers.defaults.embedding.modelId" style="flex:1;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
+                <option value="">-- 选择模型 --</option>
+              </select>
+            </div>
+            <div class="field-hint">用于记忆向量化</div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Embedding 维度</label>
+          <input id="providers.defaults.embedding.dimension" type="number" placeholder="1024" style="width:200px">
+          <div class="field-hint">向量维度，如 bge-large-zh-v1.5 为 1024</div>
+        </div>
+      </div>
+
+      <!-- Provider List -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <h3 style="font-size:15px;color:var(--text-dim)">供应商列表</h3>
+        <button class="btn btn-sm btn-outline" onclick="addProvider()">+ 新增供应商</button>
       </div>
 
       <div id="providers.list"></div>
@@ -492,36 +532,43 @@
       </div>
 
       <div id="memory-config-fields" style="margin-top:20px;opacity:0.5;pointer-events:none">
-        <h3 style="font-size:15px;margin-bottom:16px;color:var(--text-dim)">Embedding Service (SiliconFlow)</h3>
-        <div class="field">
-          <label>API Key</label>
-          <input id="memory.embedding.apiKey" type="password" placeholder="sk-...">
-          <div class="field-hint">用于向量化记忆</div>
-        </div>
-        <div class="field-row">
+        <!-- Embedding Provider -->
+        <div style="background:var(--input-bg);border:1px solid var(--input-border);border-radius:10px;padding:16px;margin-bottom:16px">
+          <h3 style="font-size:15px;margin-bottom:12px;color:var(--text-dim)">Embedding 供应商</h3>
+          <div class="field-hint" style="margin-bottom:12px">用于向量化记忆，在 Providers 页面配置</div>
           <div class="field">
-            <label>Model</label>
-            <input id="memory.embedding.model" type="text" placeholder="BAAI/bge-large-zh-v1.5">
+            <label>供应商</label>
+            <select id="memory.embedding.providerId" onchange="onMemoryProviderChange('embedding', this.value)">
+              <option value="">-- 使用默认供应商 --</option>
+            </select>
           </div>
           <div class="field">
-            <label>Dimension</label>
-            <input id="memory.embedding.dimension" type="number" placeholder="1024">
+            <label>模型</label>
+            <select id="memory.embedding.model">
+              <option value="">-- 使用默认模型 --</option>
+            </select>
           </div>
         </div>
 
-        <h3 style="font-size:15px;margin:20px 0 16px;color:var(--text-dim)">LLM Service (DeepSeek)</h3>
-        <div class="field">
-          <label>API Key</label>
-          <input id="memory.llm.apiKey" type="password" placeholder="sk-...">
-          <div class="field-hint">用于记忆摘要和压缩</div>
+        <!-- LLM Provider for Summary -->
+        <div style="background:var(--input-bg);border:1px solid var(--input-border);border-radius:10px;padding:16px;margin-bottom:16px">
+          <h3 style="font-size:15px;margin-bottom:12px;color:var(--text-dim)">LLM 供应商（摘要压缩）</h3>
+          <div class="field-hint" style="margin-bottom:12px">用于记忆摘要和压缩，在 Providers 页面配置</div>
+          <div class="field">
+            <label>供应商</label>
+            <select id="memory.llm.providerId" onchange="onMemoryProviderChange('llm', this.value)">
+              <option value="">-- 使用默认供应商 --</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>模型</label>
+            <select id="memory.llm.model">
+              <option value="">-- 使用默认模型 --</option>
+            </select>
+          </div>
         </div>
 
         <h3 style="font-size:15px;margin:20px 0 16px;color:var(--text-dim)">Storage Services</h3>
-        <div class="field">
-          <label>Redis URL</label>
-          <input id="memory.redis.url" type="text" placeholder="redis://localhost:6379">
-          <div class="field-hint">可选，用于缓存锁</div>
-        </div>
         <div class="field">
           <label>SQLite Path</label>
           <input id="memory.sqlite.path" type="text" placeholder="./data/memory.db">
@@ -769,8 +816,7 @@ function renderConfig() {
   renderList('admin.commands', config.admin?.commands ?? []);
   renderRules(config.rules ?? []);
 
-  // LLM providers
-  activeProviderKey = config.llm?.currentProvider ?? '';
+  // Providers (unified LLM + Embedding)
   renderProviders();
 
   // Memory
@@ -783,6 +829,8 @@ function renderConfig() {
 // ── Memory ──
 function renderMemory() {
   const mem = config.memory;
+  const providers = config.providers?.list ?? [];
+  const defaults = config.providers?.defaults ?? {};
   const enabled = mem?.enabled ?? false;
 
   const checkbox = document.getElementById('memory.enabled');
@@ -791,16 +839,88 @@ function renderMemory() {
 
   checkbox.onchange = () => toggleMemoryFields(checkbox.checked);
 
-  setVal('memory.embedding.apiKey', mem?.embedding?.apiKey);
-  setVal('memory.embedding.model', mem?.embedding?.model);
-  setVal('memory.embedding.dimension', mem?.embedding?.dimension);
-  setVal('memory.llm.apiKey', mem?.llm?.apiKey);
-  setVal('memory.redis.url', mem?.redis?.url);
+  // Populate embedding provider dropdown
+  const embProviderSelect = document.getElementById('memory.embedding.providerId');
+  embProviderSelect.innerHTML = '<option value="">-- 使用默认供应商 --</option>';
+  providers.forEach(p => {
+    const hasEmbedding = p.models?.some(m => m.purpose === 'embedding' || m.purpose === 'both');
+    if (hasEmbedding || p.type === 'openai') {
+      embProviderSelect.innerHTML += `<option value="${esc(p.id)}">${esc(p.id)} (${p.type})</option>`;
+    }
+  });
+
+  // Populate LLM provider dropdown
+  const llmProviderSelect = document.getElementById('memory.llm.providerId');
+  llmProviderSelect.innerHTML = '<option value="">-- 使用默认供应商 --</option>';
+  providers.forEach(p => {
+    const hasLLM = p.models?.some(m => m.purpose === 'llm' || m.purpose === 'both');
+    if (hasLLM || p.type === 'openai') {
+      llmProviderSelect.innerHTML += `<option value="${esc(p.id)}">${esc(p.id)} (${p.type})</option>`;
+    }
+  });
+
+  // Set current values
+  const currentEmbProvider = mem?.embedding?.providerId || defaults.embedding?.providerId || '';
+  const currentLlmProvider = mem?.llm?.providerId || defaults.llm?.providerId || '';
+
+  embProviderSelect.value = currentEmbProvider;
+  llmProviderSelect.value = currentLlmProvider;
+
+  // Update model dropdowns
+  updateMemoryModelDropdown('embedding', currentEmbProvider, mem?.embedding?.model);
+  updateMemoryModelDropdown('llm', currentLlmProvider, mem?.llm?.model);
+
+  // Set other fields
   setVal('memory.sqlite.path', mem?.sqlite?.path);
   setVal('memory.search.maxMemories', mem?.search?.maxMemories);
   setVal('memory.search.minScore', mem?.search?.minScore);
   setVal('memory.lifecycle.maxMemoriesPerUser', mem?.lifecycle?.maxMemoriesPerUser);
   setVal('memory.lifecycle.summaryTriggerRounds', mem?.lifecycle?.summaryTriggerRounds);
+}
+
+function updateMemoryModelDropdown(purpose, providerId, selectedModel) {
+  const selectId = `memory.${purpose}.model`;
+  const select = document.getElementById(selectId);
+  if (!select) return;
+
+  select.innerHTML = '<option value="">-- 使用默认模型 --</option>';
+
+  const providers = config.providers?.list ?? [];
+  const defaults = config.providers?.defaults ?? {};
+
+  if (!providerId) {
+    // Use defaults
+    const defaultProvider = providers.find(p => p.id === defaults[purpose]?.providerId);
+    if (defaultProvider?.models) {
+      defaultProvider.models.forEach(m => {
+        if (purpose === 'embedding' && (m.purpose === 'embedding' || m.purpose === 'both')) {
+          select.innerHTML += `<option value="${esc(m.id)}">${esc(m.id)}${m.dimension ? ` (${m.dimension}d)` : ''}</option>`;
+        } else if (purpose === 'llm' && (m.purpose === 'llm' || m.purpose === 'both')) {
+          select.innerHTML += `<option value="${esc(m.id)}">${esc(m.id)}</option>`;
+        }
+      });
+    }
+    select.value = defaults[purpose]?.modelId || '';
+  } else {
+    // Use selected provider
+    const provider = providers.find(p => p.id === providerId);
+    if (provider?.models) {
+      provider.models.forEach(m => {
+        if (purpose === 'embedding' && (m.purpose === 'embedding' || m.purpose === 'both')) {
+          select.innerHTML += `<option value="${esc(m.id)}">${esc(m.id)}${m.dimension ? ` (${m.dimension}d)` : ''}</option>`;
+        } else if (purpose === 'llm' && (m.purpose === 'llm' || m.purpose === 'both')) {
+          select.innerHTML += `<option value="${esc(m.id)}">${esc(m.id)}</option>`;
+        }
+      });
+    }
+    if (selectedModel) {
+      select.value = selectedModel;
+    }
+  }
+}
+
+function onMemoryProviderChange(purpose, providerId) {
+  updateMemoryModelDropdown(purpose, providerId, '');
 }
 
 function toggleMemoryFields(enabled) {
@@ -815,18 +935,20 @@ function collectMemory() {
     return { enabled: false };
   }
 
+  const embeddingProviderId = document.getElementById('memory.embedding.providerId')?.value || undefined;
+  const embeddingModel = document.getElementById('memory.embedding.model')?.value || undefined;
+  const llmProviderId = document.getElementById('memory.llm.providerId')?.value || undefined;
+  const llmModel = document.getElementById('memory.llm.model')?.value || undefined;
+
   return {
     enabled: true,
     embedding: {
-      apiKey: document.getElementById('memory.embedding.apiKey')?.value || '',
-      model: document.getElementById('memory.embedding.model')?.value || undefined,
-      dimension: parseInt(document.getElementById('memory.embedding.dimension')?.value) || undefined,
+      providerId: embeddingProviderId,
+      model: embeddingModel,
     },
-    llm: document.getElementById('memory.llm.apiKey')?.value ? {
-      apiKey: document.getElementById('memory.llm.apiKey').value,
-    } : undefined,
-    redis: document.getElementById('memory.redis.url')?.value ? {
-      url: document.getElementById('memory.redis.url').value,
+    llm: llmProviderId ? {
+      providerId: llmProviderId,
+      model: llmModel,
     } : undefined,
     sqlite: {
       path: document.getElementById('memory.sqlite.path')?.value || './data/memory.db',
@@ -985,12 +1107,12 @@ function collectPersona() {
 
 // ── LLM Presets ──
 const LLM_PRESETS = {
-  'OpenAI': { baseUrl: 'https://api.openai.com/v1', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'] },
-  'DeepSeek': { baseUrl: 'https://api.deepseek.com/v1', models: ['deepseek-chat', 'deepseek-reasoner'] },
-  'SiliconFlow': { baseUrl: 'https://api.siliconflow.cn/v1', models: ['Qwen/Qwen2.5-7B-Instruct', 'deepseek-ai/DeepSeek-V2.5'] },
-  'Moonshot': { baseUrl: 'https://api.moonshot.cn/v1', models: ['moonshot-v1-8k', 'moonshot-v1-32k', 'moonshot-v1-128k'] },
-  'Zhipu': { baseUrl: 'https://open.bigmodel.cn/api/paas/v4', models: ['glm-4', 'glm-4-flash', 'glm-3-turbo'] },
-  'Ollama (本地)': { baseUrl: 'http://localhost:11434/v1', models: ['llama3', 'qwen2', 'deepseek-v2'] },
+  'OpenAI': { type: 'openai', baseUrl: 'https://api.openai.com/v1', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'] },
+  'DeepSeek': { type: 'openai', baseUrl: 'https://api.deepseek.com/v1', models: ['deepseek-chat', 'deepseek-reasoner'] },
+  'SiliconFlow': { type: 'openai', baseUrl: 'https://api.siliconflow.cn/v1', models: ['Qwen/Qwen2.5-7B-Instruct', 'deepseek-ai/DeepSeek-V2.5'] },
+  'Moonshot': { type: 'openai', baseUrl: 'https://api.moonshot.cn/v1', models: ['moonshot-v1-8k', 'moonshot-v1-32k', 'moonshot-v1-128k'] },
+  'Zhipu': { type: 'openai', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', models: ['glm-4', 'glm-4-flash', 'glm-3-turbo'] },
+  'Ollama (本地)': { type: 'ollama', baseUrl: 'http://localhost:11434', models: ['llama3', 'qwen2', 'deepseek-v2'] },
 };
 
 function applyPreset(providerName, presetName) {
@@ -1017,117 +1139,194 @@ function applyPreset(providerName, presetName) {
   toast(`已应用 ${presetName} 预设`, 'success');
 }
 
-// ── LLM Providers ──
+// ── Providers ──
 function renderProviders() {
-  const providers = config.llm?.providers ?? {};
-  const names = Object.keys(providers);
+  const providers = config.providers?.list ?? [];
+  const defaults = config.providers?.defaults ?? {};
 
-  // Dropdown
-  const select = document.getElementById('llm.currentProvider');
-  select.innerHTML = '';
-  names.forEach(name => {
-    const opt = document.createElement('option');
-    opt.value = name;
-    opt.textContent = name;
-    if (name === activeProviderKey) opt.selected = true;
-    select.appendChild(opt);
-  });
+  // Update default dropdowns
+  updateDefaultDropdowns(providers, defaults);
 
-  // Cards
+  // Provider cards
   const container = document.getElementById('providers.list');
   container.innerHTML = '';
-  names.forEach(name => {
-    const p = providers[name] ?? {};
-    const isActive = name === activeProviderKey;
+
+  if (providers.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-dim)">暂无供应商，点击"新增供应商"添加</div>';
+    return;
+  }
+
+  providers.forEach((p, index) => {
     const card = document.createElement('div');
-    card.className = 'provider-card' + (isActive ? ' active-provider' : '');
-    card.dataset.name = name;
+    card.className = 'provider-card';
+    card.dataset.index = index;
     card.innerHTML = `
       <div class="provider-card-header">
-        <h3>${esc(name)} ${isActive ? '<span class="badge">当前</span>' : ''}</h3>
+        <div style="display:flex;align-items:center;gap:12px">
+          <h3>${esc(p.id)}</h3>
+          <span class="type-badge" style="background:${p.type === 'ollama' ? '#2d7a4a' : '#2d4a7a'};color:${p.type === 'ollama' ? '#7dffb3' : '#7db3ff'}">${p.type}</span>
+        </div>
         <div style="display:flex;gap:8px;align-items:center">
-          <button class="btn btn-sm btn-outline" onclick="renameProvider('${esc(name)}')">重命名</button>
-          ${names.length > 1 ? `<button class="btn btn-sm btn-danger" onclick="deleteProvider('${esc(name)}')">删除</button>` : ''}
+          <button class="btn btn-sm btn-outline" onclick="renameProvider(${index})">重命名</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteProvider(${index})">删除</button>
         </div>
       </div>
-      <div class="field">
-        <label style="display:flex;align-items:center;gap:8px">
-          Base URL
-          <select onchange="applyPreset('${esc(name)}', this.value); this.value=''"
-                  style="padding:3px 8px;font-size:12px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text-dim)">
-            <option value="">选择预设...</option>
-            ${Object.keys(LLM_PRESETS).map(k => `<option value="${k}">${k}</option>`).join('')}
+      <div class="field-row">
+        <div class="field">
+          <label>类型</label>
+          <select data-provider="${index}" data-field="type" onchange="onTypeChange(${index}, this.value)">
+            <option value="openai" ${p.type === 'openai' ? 'selected' : ''}>OpenAI 兼容</option>
+            <option value="ollama" ${p.type === 'ollama' ? 'selected' : ''}>Ollama</option>
           </select>
-        </label>
-        <input type="text" data-provider="${esc(name)}" data-field="baseUrl"
-               value="${esc(p.baseUrl ?? '')}" placeholder="https://api.openai.com/v1">
+        </div>
+        <div class="field">
+          <label style="display:flex;align-items:center;gap:8px">
+            Base URL
+            <select onchange="applyPreset(${index}, this.value); this.value=''"
+                    style="padding:3px 8px;font-size:12px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text-dim)">
+              <option value="">选择预设...</option>
+              ${Object.keys(LLM_PRESETS).map(k => `<option value="${k}">${k}</option>`).join('')}
+            </select>
+          </label>
+          <input type="text" data-provider="${index}" data-field="baseUrl"
+                 value="${esc(p.baseUrl ?? '')}" placeholder="https://api.openai.com/v1">
+        </div>
       </div>
       <div class="field">
         <label>API Key</label>
-        <input type="password" data-provider="${esc(name)}" data-field="apiKey"
-               value="${esc(p.apiKey ?? '')}" placeholder="sk-...">
+        <input type="password" data-provider="${index}" data-field="apiKey"
+               value="${esc(p.apiKey ?? '')}" placeholder="sk-... (Ollama 留空)">
+        <div class="field-hint" id="apiKey-hint-${index}">${p.type === 'ollama' ? 'Ollama 通常不需要 API Key' : 'OpenAI 兼容接口需要 API Key'}</div>
       </div>
       <div class="field">
         <label style="display:flex;align-items:center;gap:8px">
-          Model
-          <button class="btn btn-sm btn-outline" id="fetch-btn-${esc(name)}"
-                  onclick="fetchModels('${esc(name)}')" style="font-size:12px;padding:3px 10px">
+          默认模型
+          <button class="btn btn-sm btn-outline" id="fetch-btn-${index}"
+                  onclick="fetchProviderModels(${index})" style="font-size:12px;padding:3px 10px">
             获取模型
           </button>
-          <span id="fetch-status-${esc(name)}" style="font-size:12px;color:var(--text-dim)"></span>
+          <span id="fetch-status-${index}" style="font-size:12px;color:var(--text-dim)"></span>
         </label>
-        <input type="text" list="models-${esc(name)}" data-provider="${esc(name)}" data-field="model"
-               value="${esc(p.model ?? '')}" placeholder="gpt-3.5-turbo"
-               onchange="onModelChange('${esc(name)}', this.value)">
-        <datalist id="models-${esc(name)}"></datalist>
+        <input type="text" list="models-${index}" data-provider="${index}" data-field="defaultModel"
+               value="${esc(p.defaultModel ?? '')}" placeholder="选择或输入模型名称">
+        <datalist id="models-${index}">
+          ${(p.models ?? []).map(m => `<option value="${esc(m.id)}">${esc(m.id)}</option>`).join('')}
+        </datalist>
       </div>
-      <div class="field-row-3">
-        <div class="field">
-          <label>Temperature</label>
-          <input type="number" step="0.1" min="0" max="2"
-                 data-provider="${esc(name)}" data-field="temperature"
-                 value="${p.temperature ?? 0.7}" placeholder="0.7">
+
+      <!-- Models list -->
+      <div class="field" style="margin-top:16px">
+        <label>模型列表 (可选)</label>
+        <div class="field-hint" style="margin-bottom:8px">配置此供应商可用的模型，用于 WebUI 选择</div>
+        <div id="models-list-${index}" class="list-editor">
+          ${(p.models ?? []).map((m, mi) => `
+            <div class="list-row">
+              <input type="text" value="${esc(m.id)}" placeholder="模型 ID" data-model-index="${mi}">
+              <select style="width:100px" data-model-purpose="${mi}">
+                <option value="llm" ${m.purpose === 'llm' ? 'selected' : ''}>LLM</option>
+                <option value="embedding" ${m.purpose === 'embedding' ? 'selected' : ''}>Embedding</option>
+                <option value="both" ${m.purpose === 'both' ? 'selected' : ''}>Both</option>
+              </select>
+              <input type="number" style="width:80px" value="${m.dimension ?? ''}" placeholder="维度" data-model-dimension="${mi}">
+              <button class="btn-remove" onclick="removeModel(${index}, ${mi})">×</button>
+            </div>
+          `).join('')}
         </div>
-        <div class="field">
-          <label>Max Tokens</label>
-          <input type="number" data-provider="${esc(name)}" data-field="maxTokens"
-                 value="${p.maxTokens ?? ''}" placeholder="留空使用默认值">
-          <div class="field-hint">留空则使用模型默认值</div>
-        </div>
+        <button class="btn-add" onclick="addModel(${index})">+ 添加模型</button>
       </div>
     `;
     container.appendChild(card);
   });
 }
 
-function switchProvider(name) {
-  activeProviderKey = name;
-  renderProviders();
+function updateDefaultDropdowns(providers, defaults) {
+  // LLM default
+  const llmProviderSelect = document.getElementById('providers.defaults.llm.providerId');
+  const llmModelSelect = document.getElementById('providers.defaults.llm.modelId');
+  const embProviderSelect = document.getElementById('providers.defaults.embedding.providerId');
+  const embModelSelect = document.getElementById('providers.defaults.embedding.modelId');
+
+  // Save current values
+  const currentLlmProvider = llmProviderSelect.value;
+  const currentLlmModel = llmModelSelect.value;
+  const currentEmbProvider = embProviderSelect.value;
+  const currentEmbModel = embModelSelect.value;
+
+  // Clear and rebuild
+  llmProviderSelect.innerHTML = '<option value="">-- 选择供应商 --</option>';
+  embProviderSelect.innerHTML = '<option value="">-- 选择供应商 --</option>';
+
+  providers.forEach(p => {
+    llmProviderSelect.innerHTML += `<option value="${esc(p.id)}">${esc(p.id)} (${p.type})</option>`;
+    embProviderSelect.innerHTML += `<option value="${esc(p.id)}">${esc(p.id)} (${p.type})</option>`;
+  });
+
+  // Restore or set defaults
+  llmProviderSelect.value = defaults.llm?.providerId || currentLlmProvider;
+  embProviderSelect.value = defaults.embedding?.providerId || currentEmbProvider;
+
+  // Update model dropdowns
+  updateModelDropdown('llm', llmProviderSelect.value, providers, defaults.llm?.modelId || currentLlmModel);
+  updateModelDropdown('embedding', embProviderSelect.value, providers, defaults.embedding?.modelId || currentEmbModel);
+
+  // Set dimension
+  const dimensionInput = document.getElementById('providers.defaults.embedding.dimension');
+  if (dimensionInput) {
+    dimensionInput.value = defaults.embedding?.dimension ?? 1024;
+  }
+
+  // Add change handlers
+  llmProviderSelect.onchange = () => updateModelDropdown('llm', llmProviderSelect.value, providers, '');
+  embProviderSelect.onchange = () => updateModelDropdown('embedding', embProviderSelect.value, providers, '');
+}
+
+function updateModelDropdown(purpose, providerId, providers, selectedModel) {
+  const selectId = `providers.defaults.${purpose}.modelId`;
+  const select = document.getElementById(selectId);
+  if (!select) return;
+
+  select.innerHTML = '<option value="">-- 选择模型 --</option>';
+
+  const provider = providers.find(p => p.id === providerId);
+  if (provider?.models) {
+    provider.models.forEach(m => {
+      if (purpose === 'llm' && (m.purpose === 'llm' || m.purpose === 'both')) {
+        select.innerHTML += `<option value="${esc(m.id)}">${esc(m.id)}</option>`;
+      } else if (purpose === 'embedding' && (m.purpose === 'embedding' || m.purpose === 'both')) {
+        select.innerHTML += `<option value="${esc(m.id)}">${esc(m.id)}${m.dimension ? ` (${m.dimension}d)` : ''}</option>`;
+      }
+    });
+  }
+
+  if (selectedModel) {
+    select.value = selectedModel;
+  }
 }
 
 // ── Fetch models from provider ──
-async function fetchModels(providerName) {
-  const card = document.querySelector(`.provider-card[data-name="${providerName}"]`);
+async function fetchProviderModels(index) {
+  const card = document.querySelector(`.provider-card[data-index="${index}"]`);
   if (!card) return;
 
   const baseUrl = card.querySelector('[data-field="baseUrl"]')?.value?.trim();
   const apiKey = card.querySelector('[data-field="apiKey"]')?.value?.trim();
+  const type = card.querySelector('[data-field="type"]')?.value || 'openai';
 
   if (!baseUrl) {
     toast('请先填写 Base URL', 'error');
     return;
   }
 
-  const statusEl = document.getElementById(`fetch-status-${providerName}`);
-  const btnEl = document.getElementById(`fetch-btn-${providerName}`);
+  const statusEl = document.getElementById(`fetch-status-${index}`);
+  const btnEl = document.getElementById(`fetch-btn-${index}`);
   if (statusEl) statusEl.textContent = '获取中...';
   if (btnEl) btnEl.disabled = true;
 
   try {
-    const res = await fetch('/api/llm/models', {
+    const res = await fetch('/api/providers/models', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ baseUrl, apiKey }),
+      body: JSON.stringify({ baseUrl, apiKey, type }),
     });
     const json = await res.json();
 
@@ -1136,7 +1335,7 @@ async function fetchModels(providerName) {
     }
 
     // Populate datalist
-    const datalist = document.getElementById(`models-${providerName}`);
+    const datalist = document.getElementById(`models-${index}`);
     if (datalist) {
       datalist.innerHTML = '';
       json.data.forEach(id => {
@@ -1146,8 +1345,29 @@ async function fetchModels(providerName) {
       });
     }
 
+    // Also update models list
+    const providerId = card.querySelector('h3')?.textContent?.trim() || `provider_${index}`;
+    const newModels = json.data.map(id => ({ id, purpose: 'llm' }));
+
+    // Add to models list editor
+    const modelsList = document.getElementById(`models-list-${index}`);
+    if (modelsList) {
+      modelsList.innerHTML = newModels.map((m, mi) => `
+        <div class="list-row">
+          <input type="text" value="${esc(m.id)}" placeholder="模型 ID" data-model-index="${mi}">
+          <select style="width:100px" data-model-purpose="${mi}">
+            <option value="llm" selected>LLM</option>
+            <option value="embedding">Embedding</option>
+            <option value="both">Both</option>
+          </select>
+          <input type="number" style="width:80px" value="" placeholder="维度" data-model-dimension="${mi}">
+          <button class="btn-remove" onclick="removeModel(${index}, ${mi})">×</button>
+        </div>
+      `).join('');
+    }
+
     if (statusEl) statusEl.textContent = `✓ 找到 ${json.data.length} 个模型`;
-    toast(`${providerName}: 获取到 ${json.data.length} 个模型`, 'success');
+    toast(`获取到 ${json.data.length} 个模型`, 'success');
   } catch (e) {
     if (statusEl) statusEl.textContent = '✗ ' + e.message;
     toast('获取模型失败: ' + e.message, 'error');
@@ -1156,141 +1376,186 @@ async function fetchModels(providerName) {
   }
 }
 
-// ── Known model max tokens mapping ──
-const KNOWN_MODEL_TOKENS = {
-  // OpenAI
-  'gpt-3.5-turbo': 4096,
-  'gpt-3.5-turbo-16k': 16384,
-  'gpt-4': 8192,
-  'gpt-4-32k': 32768,
-  'gpt-4-turbo': 128000,
-  'gpt-4o': 128000,
-  'gpt-4o-mini': 128000,
-  'o1': 200000,
-  'o1-mini': 128000,
-  'o3-mini': 200000,
-  // Claude
-  'claude-3-opus-20240229': 200000,
-  'claude-3-sonnet-20240229': 200000,
-  'claude-3-haiku-20240307': 200000,
-  'claude-3-5-sonnet-20241022': 200000,
-  'claude-sonnet-4-20250514': 200000,
-  // DeepSeek
-  'deepseek-chat': 65536,
-  'deepseek-reasoner': 65536,
-  // Qwen
-  'qwen-turbo': 131072,
-  'qwen-plus': 131072,
-  'qwen-max': 32768,
-  // Gemini
-  'gemini-1.5-pro': 2097152,
-  'gemini-1.5-flash': 1048576,
-  'gemini-2.0-flash': 1048576,
-};
-
-function onModelChange(providerName, model) {
-  const card = document.querySelector(`.provider-card[data-name="${providerName}"]`);
+function onTypeChange(index, type) {
+  const card = document.querySelector(`.provider-card[data-index="${index}"]`);
   if (!card) return;
 
-  const maxTokensInput = card.querySelector('[data-field="maxTokens"]');
-  if (!maxTokensInput) return;
-
-  // Try exact match first, then prefix match
-  let tokens = KNOWN_MODEL_TOKENS[model];
-  if (!tokens) {
-    const prefix = Object.keys(KNOWN_MODEL_TOKENS).find(k => model.startsWith(k));
-    if (prefix) tokens = KNOWN_MODEL_TOKENS[prefix];
+  const hintEl = document.getElementById(`apiKey-hint-${index}`);
+  if (hintEl) {
+    hintEl.textContent = type === 'ollama' ? 'Ollama 通常不需要 API Key' : 'OpenAI 兼容接口需要 API Key';
   }
 
-  if (tokens) {
-    maxTokensInput.value = tokens;
-    maxTokensInput.style.borderColor = 'var(--success)';
-    setTimeout(() => maxTokensInput.style.borderColor = '', 1500);
+  // Update preset options if needed
+  toast(`已切换为 ${type === 'ollama' ? 'Ollama' : 'OpenAI 兼容'} 类型`, 'success');
+}
+
+// ── Provider CRUD ──
+function applyPreset(index, presetName) {
+  const preset = LLM_PRESETS[presetName];
+  if (!preset) return;
+
+  const card = document.querySelector(`.provider-card[data-index="${index}"]`);
+  if (!card) return;
+
+  // Update type
+  const typeSelect = card.querySelector('[data-field="type"]');
+  if (typeSelect) {
+    typeSelect.value = preset.type;
+    onTypeChange(index, preset.type);
   }
+
+  // Update baseUrl
+  const baseUrlInput = card.querySelector('[data-field="baseUrl"]');
+  if (baseUrlInput) baseUrlInput.value = preset.baseUrl;
+
+  // Update models datalist
+  const datalist = document.getElementById(`models-${index}`);
+  if (datalist) {
+    datalist.innerHTML = '';
+    preset.models.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      datalist.appendChild(opt);
+    });
+  }
+
+  toast(`已应用 ${presetName} 预设`, 'success');
 }
 
 function addProvider() {
   const name = prompt('供应商名称（英文，如 deepseek、ollama）');
   if (!name || !name.trim()) return;
-  const key = name.trim().toLowerCase().replace(/\s+/g, '_');
+  const id = name.trim().toLowerCase().replace(/\s+/g, '_');
 
-  if (!config.llm) config.llm = { currentProvider: key, providers: {} };
-  if (!config.llm.providers) config.llm.providers = {};
-  if (config.llm.providers[key]) {
-    toast('供应商 "' + key + '" 已存在', 'error');
+  if (!config.providers) {
+    config.providers = { list: [], defaults: {} };
+  }
+  if (!config.providers.list) {
+    config.providers.list = [];
+  }
+
+  if (config.providers.list.some(p => p.id === id)) {
+    toast('供应商 "' + id + '" 已存在', 'error');
     return;
   }
 
-  config.llm.providers[key] = {
+  config.providers.list.push({
+    id,
+    type: 'openai',
     baseUrl: '',
     apiKey: '',
-    model: '',
-    temperature: 0.7,
-    maxTokens: undefined,
-  };
-  activeProviderKey = key;
-  config.llm.currentProvider = key;
+    models: [],
+  });
+
   renderProviders();
+  toast(`已添加供应商 "${id}"`, 'success');
 }
 
-function deleteProvider(name) {
-  const providers = config.llm?.providers ?? {};
-  if (Object.keys(providers).length <= 1) {
+function deleteProvider(index) {
+  if (!config.providers?.list) return;
+  if (config.providers.list.length <= 1) {
     toast('至少保留一个供应商', 'error');
     return;
   }
-  if (!confirm('确认删除供应商 "' + name + '"？')) return;
 
-  delete providers[name];
-  if (activeProviderKey === name) {
-    activeProviderKey = Object.keys(providers)[0];
-    config.llm.currentProvider = activeProviderKey;
+  const provider = config.providers.list[index];
+  if (!confirm(`确认删除供应商 "${provider.id}"？`)) return;
+
+  config.providers.list.splice(index, 1);
+
+  // Update defaults if needed
+  if (config.providers.defaults.llm?.providerId === provider.id) {
+    config.providers.defaults.llm = undefined;
   }
+  if (config.providers.defaults.embedding?.providerId === provider.id) {
+    config.providers.defaults.embedding = undefined;
+  }
+
   renderProviders();
+  toast(`已删除供应商 "${provider.id}"`, 'success');
 }
 
-function renameProvider(oldName) {
-  const newName = prompt('新名称', oldName);
-  if (!newName || !newName.trim() || newName.trim() === oldName) return;
-  const key = newName.trim().toLowerCase().replace(/\s+/g, '_');
+function renameProvider(index) {
+  if (!config.providers?.list?.[index]) return;
 
-  if (config.llm.providers[key]) {
-    toast('名称 "' + key + '" 已存在', 'error');
+  const oldId = config.providers.list[index].id;
+  const newId = prompt('新名称', oldId);
+  if (!newId || !newId.trim() || newId.trim() === oldId) return;
+  const id = newId.trim().toLowerCase().replace(/\s+/g, '_');
+
+  if (config.providers.list.some(p => p.id === id && p !== config.providers.list[index])) {
+    toast('名称 "' + id + '" 已存在', 'error');
     return;
   }
 
-  const providers = config.llm.providers;
-  const entries = Object.entries(providers);
-  const newProviders = {};
-  for (const [k, v] of entries) {
-    if (k === oldName) {
-      newProviders[key] = v;
-    } else {
-      newProviders[k] = v;
-    }
-  }
-  config.llm.providers = newProviders;
+  const oldId2 = config.providers.list[index].id;
+  config.providers.list[index].id = id;
 
-  if (activeProviderKey === oldName) {
-    activeProviderKey = key;
-    config.llm.currentProvider = key;
+  // Update defaults if needed
+  if (config.providers.defaults.llm?.providerId === oldId2) {
+    config.providers.defaults.llm.providerId = id;
   }
+  if (config.providers.defaults.embedding?.providerId === oldId2) {
+    config.providers.defaults.embedding.providerId = id;
+  }
+
+  renderProviders();
+  toast(`已重命名为 "${id}"`, 'success');
+}
+
+function addModel(providerIndex) {
+  if (!config.providers?.list?.[providerIndex]) return;
+
+  const provider = config.providers.list[providerIndex];
+  if (!provider.models) provider.models = [];
+
+  provider.models.push({ id: '', purpose: 'llm' });
+  renderProviders();
+}
+
+function removeModel(providerIndex, modelIndex) {
+  if (!config.providers?.list?.[providerIndex]?.models) return;
+
+  config.providers.list[providerIndex].models.splice(modelIndex, 1);
   renderProviders();
 }
 
 function collectProviders() {
-  const providers = {};
+  const providers = [];
+
   document.querySelectorAll('.provider-card').forEach(card => {
-    const name = card.dataset.name;
-    const maxTokensVal = card.querySelector('[data-field="maxTokens"]')?.value;
-    providers[name] = {
-      baseUrl: card.querySelector('[data-field="baseUrl"]')?.value ?? '',
-      apiKey: card.querySelector('[data-field="apiKey"]')?.value ?? '',
-      model: card.querySelector('[data-field="model"]')?.value ?? '',
-      temperature: parseFloat(card.querySelector('[data-field="temperature"]')?.value) || 0.7,
-      maxTokens: maxTokensVal ? parseInt(maxTokensVal) : undefined,
-    };
+    const index = parseInt(card.dataset.index);
+    const id = card.querySelector('h3')?.textContent?.trim() || `provider_${index}`;
+
+    const type = card.querySelector('[data-field="type"]')?.value || 'openai';
+    const baseUrl = card.querySelector('[data-field="baseUrl"]')?.value || '';
+    const apiKey = card.querySelector('[data-field="apiKey"]')?.value || '';
+    const defaultModel = card.querySelector('[data-field="defaultModel"]')?.value || '';
+
+    // Collect models
+    const models = [];
+    const modelsList = card.querySelector(`#models-list-${index}`);
+    if (modelsList) {
+      modelsList.querySelectorAll('.list-row').forEach((row, mi) => {
+        const modelId = row.querySelector(`[data-model-index="${mi}"]`)?.value?.trim();
+        if (modelId) {
+          const purpose = row.querySelector(`[data-model-purpose="${mi}"]`)?.value || 'llm';
+          const dimension = parseInt(row.querySelector(`[data-model-dimension="${mi}"]`)?.value) || undefined;
+          models.push({ id: modelId, purpose, dimension });
+        }
+      });
+    }
+
+    providers.push({
+      id,
+      type,
+      baseUrl,
+      apiKey,
+      defaultModel: defaultModel || undefined,
+      models: models.length > 0 ? models : undefined,
+    });
   });
+
   return providers;
 }
 
@@ -1392,9 +1657,19 @@ async function saveConfig() {
       url: document.getElementById('onebot.url').value || 'http://127.0.0.1:3000',
       accessToken: document.getElementById('onebot.accessToken').value || undefined,
     },
-    llm: {
-      currentProvider: activeProviderKey,
-      providers: collectProviders(),
+    providers: {
+      list: collectProviders(),
+      defaults: {
+        llm: {
+          providerId: document.getElementById('providers.defaults.llm.providerId')?.value || undefined,
+          modelId: document.getElementById('providers.defaults.llm.modelId')?.value || undefined,
+        },
+        embedding: {
+          providerId: document.getElementById('providers.defaults.embedding.providerId')?.value || undefined,
+          modelId: document.getElementById('providers.defaults.embedding.modelId')?.value || undefined,
+          dimension: parseInt(document.getElementById('providers.defaults.embedding.dimension')?.value) || undefined,
+        },
+      },
     },
     storage: {
       type: document.getElementById('storage.type').value || 'sqlite',

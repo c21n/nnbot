@@ -13,6 +13,7 @@ import { readFileSync, writeFileSync, existsSync } from "fs";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import axios from "axios";
 import type { Config, LLMProviderConfig, MemoryConfig, ToolsConfig } from "../interfaces.js";
+import type { ProvidersConfig } from "../providers/types.js";
 import { ok, fail } from "./utils/response.js";
 import { readEnvFile, writeEnvVars } from "./utils/env-file.js";
 
@@ -33,10 +34,22 @@ function resolveEnvRefs(config: Config): Config {
     return val;
   };
 
-  // Resolve LLM provider keys
-  const providers: Record<string, LLMProviderConfig> = {};
+  // Resolve LLM provider keys (legacy format)
+  const llmProviders: Record<string, LLMProviderConfig> = {};
   for (const [name, p] of Object.entries(config.llm?.providers ?? {})) {
-    providers[name] = { ...p, apiKey: resolve(p.apiKey) };
+    llmProviders[name] = { ...p, apiKey: resolve(p.apiKey) };
+  }
+
+  // Resolve unified providers keys
+  let providers: ProvidersConfig | undefined;
+  if (config.providers) {
+    providers = {
+      list: config.providers.list.map(p => ({
+        ...p,
+        apiKey: resolve(p.apiKey),
+      })),
+      defaults: config.providers.defaults,
+    };
   }
 
   // Resolve memory keys
@@ -63,7 +76,7 @@ function resolveEnvRefs(config: Config): Config {
     };
   }
 
-  return { ...config, llm: { ...config.llm, providers }, memory, tools };
+  return { ...config, llm: { ...config.llm, providers: llmProviders }, providers, memory, tools };
 }
 
 /**
@@ -73,16 +86,32 @@ function resolveEnvRefs(config: Config): Config {
 function extractApiKeys(config: Config): { keys: Record<string, string>; clean: Config } {
   const keys: Record<string, string> = {};
 
-  // Extract LLM provider keys
-  const providers: Record<string, LLMProviderConfig> = {};
+  // Extract LLM provider keys (legacy format)
+  const llmProviders: Record<string, LLMProviderConfig> = {};
   for (const [name, p] of Object.entries(config.llm?.providers ?? {})) {
     if (p.apiKey && !p.apiKey.startsWith("${")) {
       const envKey = `LLM_${name.toUpperCase()}_API_KEY`;
       keys[envKey] = p.apiKey;
-      providers[name] = { ...p, apiKey: `\${${envKey}}` };
+      llmProviders[name] = { ...p, apiKey: `\${${envKey}}` };
     } else {
-      providers[name] = p;
+      llmProviders[name] = p;
     }
+  }
+
+  // Extract unified providers keys
+  let providers: ProvidersConfig | undefined = config.providers;
+  if (providers) {
+    providers = {
+      list: providers.list.map(p => {
+        if (p.apiKey && !p.apiKey.startsWith("${")) {
+          const envKey = `PROVIDER_${p.id.toUpperCase()}_API_KEY`;
+          keys[envKey] = p.apiKey;
+          return { ...p, apiKey: `\${${envKey}}` };
+        }
+        return p;
+      }),
+      defaults: providers.defaults,
+    };
   }
 
   // Extract memory keys
@@ -117,7 +146,7 @@ function extractApiKeys(config: Config): { keys: Record<string, string>; clean: 
     };
   }
 
-  return { keys, clean: { ...config, llm: { ...config.llm, providers }, memory, tools } };
+  return { keys, clean: { ...config, llm: { ...config.llm, providers: llmProviders }, providers, memory, tools } };
 }
 
 // ── Routes ──
@@ -214,6 +243,54 @@ export async function configApi(app: FastifyInstance): Promise<void> {
       }>;
 
       return reply.send(ok(models.map((m) => m.id)));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return reply.send(fail(message));
+    }
+  });
+
+  /**
+   * POST /api/providers/models — Fetch models from a provider (supports both OpenAI and Ollama)
+   */
+  app.post("/api/providers/models", async (request, reply) => {
+    const { baseUrl, apiKey, type } = request.body as {
+      baseUrl?: string;
+      apiKey?: string;
+      type?: "openai" | "ollama";
+    };
+
+    if (!baseUrl) {
+      return reply.status(400).send(fail("baseUrl is required"));
+    }
+
+    try {
+      const providerType = type || "openai";
+      let models: string[] = [];
+
+      if (providerType === "ollama") {
+        // Ollama uses /api/tags endpoint
+        const client = axios.create({
+          baseURL: baseUrl,
+          timeout: 10000,
+        });
+        const response = await client.get("/api/tags");
+        models = (response.data.models ?? []).map((m: { name: string }) => m.name);
+      } else {
+        // OpenAI-compatible uses /models endpoint
+        const client = axios.create({
+          baseURL: baseUrl,
+          headers: {
+            ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+            "Content-Type": "application/json",
+          },
+          timeout: 10000,
+        });
+        const response = await client.get("/models");
+        const rawModels = (response.data.data ?? response.data) as Array<{ id: string }>;
+        models = rawModels.map((m) => m.id);
+      }
+
+      return reply.send(ok(models));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return reply.send(fail(message));
