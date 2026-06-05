@@ -1,6 +1,16 @@
 # Tool Calling System
 
+> 版本：0.1.0 | 模块：`src/services/tools/`
+
 NNBot 的工具调用系统，让 LLM 可以调用预定义的工具完成任务。
+
+## 特性
+
+- **渐进式披露**：工具按需实例化，减少启动开销和 LLM token 消耗
+- **声明式工厂**：通过 `IToolFactory` 声明关键词和标签，配置清晰
+- **全局排除**：问候语、闲聊等场景自动跳过工具调用
+- **缓存复用**：首次创建后缓存，后续调用直接复用
+- **向后兼容**：支持直接注册 `register()` 和工厂注册 `registerFactory()` 两种方式
 
 ## 架构
 
@@ -182,11 +192,44 @@ export class WebSearchTool implements ITool {
 | `calculator` | 计算, 多少, 加, 减, 乘, 除 | 数学计算器 |
 | `web_search` | 搜, 搜索, 查, 天气, 价格, ... | 网页搜索（需配置） |
 
+## 配置
+
+在 `config.yaml` 中配置工具系统：
+
+```yaml
+tools:
+  search:
+    enabled: true              # 是否启用搜索工具
+    provider: duckduckgo       # 搜索引擎：duckduckgo, serpapi
+    apiKey: ${SERPAPI_API_KEY} # SerpAPI 密钥（可选）
+    defaultLimit: 5            # 默认搜索结果数
+    region: cn-hans            # 搜索区域（可选）
+```
+
+## 测试
+
+```bash
+# 运行工具系统测试
+npx vitest run src/services/tools/__tests__/
+
+# 运行特定测试
+npx vitest run src/services/tools/__tests__/tool-registry.test.ts
+```
+
+测试覆盖：
+- 工厂注册和覆盖
+- 全局排除模式（问候语、闲聊、创意任务）
+- keywords 匹配（大小写不敏感）
+- 缓存机制（单次创建、实例复用）
+- 错误处理（factory.create() 异常）
+- unregister 清理（工厂 + 缓存）
+- getActiveTools 合并（直接注册 + 缓存）
+
 ## 文件结构
 
 ```
 src/services/tools/
-├── types.ts              # 类型定义 (ITool, IToolFactory, IToolRegistry)
+├── types.ts              # 类型定义 (ITool, IToolFactory, IToolRegistry, GLOBAL_EXCLUDE_PATTERNS)
 ├── tool-registry.ts      # 工具注册表 (register, registerFactory, getToolsForIntent)
 ├── tool-executor.ts      # 工具执行器（超时、校验、错误处理）
 ├── tool-loop.ts          # 工具调用循环
@@ -198,3 +241,12 @@ src/services/tools/
     ├── calculator.ts     # 计算器
     └── web-search.ts     # 网页搜索
 ```
+
+## 变更日志
+
+### v0.1.0 (2026-06-05)
+- **新增**：渐进式披露系统（IToolFactory + 按需实例化 + 缓存）
+- **新增**：全局排除模式 GLOBAL_EXCLUDE_PATTERNS
+- **新增**：registerFactory() 和 getToolsForIntent() 接口
+- **删除**：tool-filter.ts（功能迁移到 getToolsForIntent）
+- **改进**：ai-chat 插件改用 getToolsForIntent 替代 shouldEnableTools
