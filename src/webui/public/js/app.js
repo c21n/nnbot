@@ -49,6 +49,16 @@ function setupMobileMenu() {
     });
   }
 
+  // Sidebar item click handlers
+  document.querySelectorAll('.sidebar-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const page = item.dataset.page;
+      if (page) {
+        router.navigate(page);
+      }
+    });
+  });
+
   // Close sidebar on navigation (mobile)
   router.onChange = () => {
     sidebar?.classList.remove('open');
