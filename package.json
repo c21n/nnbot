@@ -4,7 +4,8 @@
   "description": "Lightweight QQ Bot with plugin system",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && npm run copy:public",
+    "copy:public": "node -e \"const fs=require('fs');const p=require('path');function c(s,d){if(!fs.existsSync(d))fs.mkdirSync(d,{recursive:true});for(const f of fs.readdirSync(s)){const sp=p.join(s,f),dp=p.join(d,f);if(fs.statSync(sp).isDirectory())c(sp,dp);else fs.copyFileSync(sp,dp)}}c('src/webui/public','dist/webui/public')\"",
     "start": "node dist/bot.js",
     "dev": "tsx src/bot.ts",
     "lint": "eslint src --ext .ts",

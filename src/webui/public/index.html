@@ -3,1924 +3,558 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NNBot Settings</title>
-  <style>
-    :root {
-      --bg: #1a1a2e;
-      --surface: #16213e;
-      --surface2: #0f3460;
-      --primary: #e94560;
-      --primary-hover: #ff6b81;
-      --text: #eee;
-      --text-dim: #999;
-      --border: #2a2a4a;
-      --success: #2ecc71;
-      --danger: #e74c3c;
-      --input-bg: #0d1b2a;
-      --input-border: #1b2838;
-    }
+  <title>NNBot Dashboard</title>
 
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-    }
-
-    .header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 16px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .header h1 { font-size: 20px; font-weight: 600; }
-    .header h1 span { color: var(--primary); }
-
-    .layout {
-      display: flex;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 24px;
-      gap: 24px;
-    }
-
-    .sidebar {
-      width: 200px;
-      flex-shrink: 0;
-    }
-    .sidebar-item {
-      padding: 10px 16px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 14px;
-      color: var(--text-dim);
-      transition: all 0.15s;
-      margin-bottom: 4px;
-    }
-    .sidebar-item:hover { background: var(--surface); color: var(--text); }
-    .sidebar-item.active {
-      background: var(--surface2);
-      color: var(--text);
-      font-weight: 500;
-    }
-
-    .content { flex: 1; min-width: 0; }
-
-    .section {
-      display: none;
-      background: var(--surface);
-      border-radius: 12px;
-      padding: 24px;
-      border: 1px solid var(--border);
-    }
-    .section.active { display: block; }
-
-    .section h2 {
-      font-size: 18px;
-      margin-bottom: 20px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .field {
-      margin-bottom: 16px;
-    }
-    .field label {
-      display: block;
-      font-size: 13px;
-      color: var(--text-dim);
-      margin-bottom: 6px;
-    }
-    .field input, .field select, .field textarea {
-      width: 100%;
-      padding: 10px 12px;
-      background: var(--input-bg);
-      border: 1px solid var(--input-border);
-      border-radius: 8px;
-      color: var(--text);
-      font-size: 14px;
-      font-family: inherit;
-      transition: border-color 0.15s;
-    }
-    .field input:focus, .field select:focus, .field textarea:focus {
-      outline: none;
-      border-color: var(--primary);
-    }
-    .field textarea { resize: vertical; min-height: 80px; }
-
-    .field-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-    .field-row-3 {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 16px;
-    }
-
-    .field-hint {
-      font-size: 12px;
-      color: var(--text-dim);
-      margin-top: 4px;
-    }
-
-    .actions {
-      margin-top: 24px;
-      display: flex;
-      gap: 12px;
-      justify-content: flex-end;
-    }
-    .btn {
-      padding: 10px 24px;
-      border: none;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-    .btn-primary { background: var(--primary); color: white; }
-    .btn-primary:hover { background: var(--primary-hover); }
-    .btn-secondary { background: var(--surface2); color: var(--text); }
-    .btn-secondary:hover { background: #1a4a7a; }
-    .btn-sm {
-      padding: 6px 14px;
-      font-size: 13px;
-      border-radius: 6px;
-    }
-    .btn-danger { background: var(--danger); color: white; }
-    .btn-danger:hover { background: #c0392b; }
-    .btn-outline {
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--text-dim);
-    }
-    .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
-
-    .toast {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      padding: 12px 20px;
-      border-radius: 8px;
-      font-size: 14px;
-      color: white;
-      opacity: 0;
-      transform: translateY(10px);
-      transition: all 0.3s;
-      z-index: 1000;
-    }
-    .toast.show { opacity: 1; transform: translateY(0); }
-    .toast.success { background: var(--success); }
-    .toast.error { background: var(--danger); }
-
-    .list-editor { display: flex; flex-direction: column; gap: 8px; }
-    .list-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    .list-row input { flex: 1; }
-    .list-row .btn-remove {
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      background: transparent;
-      color: var(--danger);
-      cursor: pointer;
-      font-size: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .list-row .btn-remove:hover { background: rgba(231, 76, 60, 0.1); }
-    .btn-add {
-      padding: 8px 16px;
-      border: 1px dashed var(--border);
-      border-radius: 8px;
-      background: transparent;
-      color: var(--text-dim);
-      cursor: pointer;
-      font-size: 13px;
-      width: fit-content;
-    }
-    .btn-add:hover { border-color: var(--primary); color: var(--primary); }
-
-    .rules-table { width: 100%; }
-    .rule-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr 36px;
-      gap: 8px;
-      margin-bottom: 8px;
-      align-items: center;
-    }
-
-    /* ── Search Providers Status ── */
-    .search-providers-status {
-      background: var(--surface);
-      border-radius: 8px;
-      padding: 16px;
-    }
-
-    /* ── LLM Provider cards ── */
-    .provider-bar {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-    .provider-bar select {
-      flex: 1;
-      padding: 10px 12px;
-      background: var(--input-bg);
-      border: 1px solid var(--input-border);
-      border-radius: 8px;
-      color: var(--text);
-      font-size: 14px;
-    }
-    .provider-bar select:focus { outline: none; border-color: var(--primary); }
-
-    .provider-card {
-      background: var(--input-bg);
-      border: 1px solid var(--input-border);
-      border-radius: 10px;
-      padding: 20px;
-      margin-bottom: 12px;
-      position: relative;
-    }
-    .provider-card.active-provider {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 1px var(--primary);
-    }
-    .provider-card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 16px;
-    }
-    .provider-card-header h3 {
-      font-size: 15px;
-      font-weight: 500;
-    }
-    .provider-card-header h3 .badge {
-      font-size: 11px;
-      background: var(--primary);
-      color: white;
-      padding: 2px 8px;
-      border-radius: 4px;
-      margin-left: 8px;
-      font-weight: 400;
-    }
-    .provider-card-header .name-input {
-      width: 180px;
-      padding: 6px 10px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      color: var(--text);
-      font-size: 13px;
-    }
-
-    .mem-card {
-      background: var(--input-bg);
-      border: 1px solid var(--input-border);
-      border-radius: 10px;
-      padding: 16px;
-      margin-bottom: 12px;
-      transition: border-color 0.15s;
-    }
-    .mem-card:hover { border-color: var(--border); }
-    .mem-card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-    .mem-card-meta {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      font-size: 12px;
-      color: var(--text-dim);
-    }
-    .mem-card-meta .tag {
-      background: var(--surface2);
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-    }
-    .mem-card-text {
-      font-size: 14px;
-      line-height: 1.6;
-      color: var(--text);
-      white-space: pre-wrap;
-      word-break: break-word;
-      max-height: 200px;
-      overflow-y: auto;
-    }
-    .mem-card-text.collapsed {
-      max-height: 80px;
-      overflow: hidden;
-      position: relative;
-    }
-    .mem-card-text.collapsed::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 40px;
-      background: linear-gradient(transparent, var(--input-bg));
-    }
-    .mem-empty {
-      text-align: center;
-      padding: 40px;
-      color: var(--text-dim);
-      font-size: 14px;
-    }
-    .type-badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 500;
-    }
-    .type-badge.summary { background: #2d4a7a; color: #7db3ff; }
-    .type-badge.preference { background: #4a2d7a; color: #b37dff; }
-    .type-badge.event { background: #2d7a4a; color: #7dffb3; }
-    .type-badge.context { background: #7a4a2d; color: #ffb37d; }
-
-    @media (max-width: 768px) {
-      .layout { flex-direction: column; padding: 16px; }
-      .sidebar { width: 100%; display: flex; gap: 4px; overflow-x: auto; }
-      .sidebar-item { white-space: nowrap; }
-      .field-row, .field-row-3 { grid-template-columns: 1fr; }
-    }
-  </style>
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/pages.css">
 </head>
 <body>
 
-<div class="header">
-  <h1>⚙️ <span>NNBot</span> Settings</h1>
-  <span id="status" style="font-size:13px;color:var(--text-dim)">Loading...</span>
-</div>
+<div class="app-layout">
+  <!-- Sidebar Overlay (mobile) -->
+  <div id="sidebar-overlay" class="sidebar-overlay"></div>
 
-<div class="layout">
-  <nav class="sidebar">
-    <div class="sidebar-item active" data-section="server">Server</div>
-    <div class="sidebar-item" data-section="onebot">OneBot</div>
-    <div class="sidebar-item" data-section="llm">Providers</div>
-    <div class="sidebar-item" data-section="storage">Storage</div>
-    <div class="sidebar-item" data-section="plugins">Plugins</div>
-    <div class="sidebar-item" data-section="persona">Persona</div>
-    <div class="sidebar-item" data-section="memory">Memory</div>
-    <div class="sidebar-item" data-section="memdata">📊 记忆数据</div>
-    <div class="sidebar-item" data-section="tools">🔍 搜索</div>
-    <div class="sidebar-item" data-section="admin">Admin</div>
-    <div class="sidebar-item" data-section="context">Context</div>
-    <div class="sidebar-item" data-section="rules">Rules</div>
-  </nav>
-
-  <main class="content">
-
-    <!-- Server -->
-    <div id="sec-server" class="section active">
-      <h2>🖥️ Server</h2>
-      <div class="field-row">
-        <div class="field">
-          <label>Host</label>
-          <input id="server.host" type="text" placeholder="0.0.0.0">
-        </div>
-        <div class="field">
-          <label>Port</label>
-          <input id="server.port" type="number" placeholder="8080">
-        </div>
-      </div>
+  <!-- Sidebar -->
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">NN<span>Bot</span></div>
     </div>
 
-    <!-- OneBot -->
-    <div id="sec-onebot" class="section">
-      <h2>🤖 OneBot</h2>
-      <div class="field">
-        <label>URL</label>
-        <input id="onebot.url" type="text" placeholder="http://127.0.0.1:3000">
-        <div class="field-hint">OneBot 实现的 HTTP 地址</div>
+    <nav class="sidebar-nav">
+      <!-- Main -->
+      <div class="sidebar-group">
+        <div class="sidebar-group-label">主菜单</div>
+        <div class="sidebar-item active" data-page="dashboard" data-title="Dashboard">
+          <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <span>Dashboard</span>
+        </div>
       </div>
-      <div class="field">
-        <label>Access Token</label>
-        <input id="onebot.accessToken" type="password" placeholder="留空表示无需认证">
+
+      <!-- AI & Models -->
+      <div class="sidebar-group">
+        <div class="sidebar-group-label">AI & 模型</div>
+        <div class="sidebar-item" data-page="providers" data-title="模型供应商">
+          <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          <span>Providers</span>
+        </div>
+        <div class="sidebar-item" data-page="memory" data-title="记忆配置">
+          <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6v6l4 2"/></svg>
+          <span>Memory</span>
+        </div>
+        <div class="sidebar-item" data-page="search" data-title="搜索配置">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <span>Search</span>
+        </div>
       </div>
+
+      <!-- Content -->
+      <div class="sidebar-group">
+        <div class="sidebar-group-label">内容管理</div>
+        <div class="sidebar-item" data-page="persona" data-title="人设管理">
+          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>Persona</span>
+        </div>
+        <div class="sidebar-item" data-page="memory-data" data-title="记忆数据">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <span>Memory Data</span>
+        </div>
+        <div class="sidebar-item" data-page="rules" data-title="规则配置">
+          <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <span>Rules</span>
+        </div>
+        <div class="sidebar-item" data-page="plugins" data-title="插件管理">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <span>Plugins</span>
+        </div>
+      </div>
+
+      <!-- System -->
+      <div class="sidebar-group">
+        <div class="sidebar-group-label">系统</div>
+        <div class="sidebar-item" data-page="admin" data-title="管理员">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span>Admin</span>
+        </div>
+        <div class="sidebar-item" data-page="settings" data-title="系统设置">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Settings</span>
+        </div>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      NNBot v2.0
     </div>
+  </aside>
 
-    <!-- LLM / Providers -->
-    <div id="sec-llm" class="section">
-      <h2>🧠 模型供应商 (Providers)</h2>
+  <!-- Main Content -->
+  <main class="main-content">
+    <header class="content-header">
+      <div style="display:flex;align-items:center;gap:var(--space-3)">
+        <button id="mobile-menu-btn" class="mobile-menu-btn">
+          <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <h1 id="page-title">Dashboard</h1>
+      </div>
+      <div style="display:flex;align-items:center;gap:var(--space-3)">
+        <span id="header-status" style="font-size:var(--text-xs);color:var(--text-muted)">连接中...</span>
+        <button id="reset-btn" class="btn btn-secondary btn-sm">重置</button>
+        <button id="save-btn" class="btn btn-primary btn-sm">保存</button>
+      </div>
+    </header>
 
-      <div class="field-hint" style="margin-bottom:20px">
-        统一管理所有 LLM 和 Embedding 供应商。支持 OpenAI 兼容和 Ollama 两种格式。
+    <div class="content-body">
+
+      <!-- Dashboard Page -->
+      <div id="page-dashboard" class="page active">
+        <div class="dashboard-grid">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">服务器状态</div>
+            </div>
+            <div id="health-status" class="status-indicator">
+              <span class="status-dot offline"></span>
+              <span>检查中...</span>
+            </div>
+            <div style="margin-top:var(--space-3);font-size:var(--text-sm);color:var(--text-secondary)">
+              运行时间: <span id="health-uptime">-</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">快速操作</div>
+            </div>
+            <div class="quick-actions">
+              <button class="btn btn-secondary btn-sm" onclick="location.hash='providers'">配置 Provider</button>
+              <button class="btn btn-secondary btn-sm" onclick="location.hash='memory-data'">查看记忆</button>
+              <button class="btn btn-secondary btn-sm" onclick="location.hash='settings'">系统设置</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">最近活跃用户</div>
+            </div>
+            <div id="recent-users">
+              <div class="loading-overlay"><div class="spinner"></div></div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- Defaults -->
-      <div style="background:var(--input-bg);border:1px solid var(--input-border);border-radius:10px;padding:20px;margin-bottom:20px">
-        <h3 style="font-size:15px;margin-bottom:16px;color:var(--text-dim)">默认供应商</h3>
-        <div class="field-row">
-          <div class="field">
-            <label>默认 LLM</label>
-            <div style="display:flex;gap:8px">
-              <select id="providers.defaults.llm.providerId" style="flex:1;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
-                <option value="">-- 选择供应商 --</option>
+      <!-- Providers Page -->
+      <div id="page-providers" class="page">
+        <div class="card" style="margin-bottom:var(--space-4)">
+          <div class="card-header">
+            <div>
+              <div class="card-title">默认供应商</div>
+              <div class="card-description">选择默认的 LLM 和 Embedding 供应商</div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">默认 LLM</label>
+              <div style="display:flex;gap:var(--space-2)">
+                <select id="providers-defaults-llm-provider" class="form-select" style="flex:1">
+                  <option value="">-- 选择供应商 --</option>
+                </select>
+                <select id="providers-defaults-llm-model" class="form-select" style="flex:1">
+                  <option value="">-- 选择模型 --</option>
+                </select>
+              </div>
+              <div class="form-hint">用于 AI 对话的主要 LLM</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">默认 Embedding</label>
+              <div style="display:flex;gap:var(--space-2)">
+                <select id="providers-defaults-emb-provider" class="form-select" style="flex:1">
+                  <option value="">-- 选择供应商 --</option>
+                </select>
+                <select id="providers-defaults-emb-model" class="form-select" style="flex:1">
+                  <option value="">-- 选择模型 --</option>
+                </select>
+              </div>
+              <div class="form-hint">用于记忆向量化</div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Embedding 维度</label>
+            <input id="providers-defaults-emb-dimension" class="form-input" type="number" placeholder="1024" style="width:200px">
+            <div class="form-hint">向量维度，如 bge-large-zh-v1.5 为 1024</div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4)">
+          <h3 style="font-size:var(--text-base);color:var(--text-secondary)">供应商列表</h3>
+          <button class="btn btn-sm btn-secondary" onclick="window._providers.add()">+ 新增供应商</button>
+        </div>
+        <div id="providers-list"></div>
+      </div>
+
+      <!-- Persona Page -->
+      <div id="page-persona" class="page">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">人设管理</div>
+              <div class="card-description">配置 Bot 的人格设定</div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Default Persona</label>
+            <textarea id="persona-default" class="form-textarea" rows="6" placeholder="你是一个友好的助手..."></textarea>
+            <div class="form-hint">Bot 的默认人格设定</div>
+          </div>
+          <div class="form-group" style="margin-top:var(--space-5)">
+            <label class="form-label">User Personas</label>
+            <div class="form-hint" style="margin-bottom:var(--space-3)">为特定用户设置独立人格（优先级高于默认）</div>
+            <div id="persona-users"></div>
+            <button class="btn-add" onclick="window._persona.add()">+ 添加用户人格</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Memory Config Page -->
+      <div id="page-memory" class="page">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">记忆系统</div>
+              <div class="card-description">配置长期记忆功能</div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-checkbox">
+              <input type="checkbox" id="memory-enabled">
+              <span>启用记忆系统</span>
+            </label>
+            <div class="form-hint">启用长期记忆功能（基于向量检索）</div>
+          </div>
+
+          <div id="memory-config-fields" style="opacity:0.5;pointer-events:none">
+            <!-- Embedding Provider -->
+            <div class="card" style="margin-top:var(--space-4);background:var(--surface-0)">
+              <h3 style="font-size:var(--text-sm);font-weight:var(--font-medium);color:var(--text-muted);margin-bottom:var(--space-3)">Embedding 供应商</h3>
+              <div class="form-hint" style="margin-bottom:var(--space-3)">用于向量化记忆，在 Providers 页面配置</div>
+              <div class="form-group">
+                <label class="form-label">供应商</label>
+                <select id="memory-emb-provider" class="form-select">
+                  <option value="">-- 使用默认供应商 --</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">模型</label>
+                <select id="memory-emb-model" class="form-select">
+                  <option value="">-- 使用默认模型 --</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- LLM Provider -->
+            <div class="card" style="margin-top:var(--space-4);background:var(--surface-0)">
+              <h3 style="font-size:var(--text-sm);font-weight:var(--font-medium);color:var(--text-muted);margin-bottom:var(--space-3)">LLM 供应商（摘要压缩）</h3>
+              <div class="form-hint" style="margin-bottom:var(--space-3)">用于记忆摘要和压缩，在 Providers 页面配置</div>
+              <div class="form-group">
+                <label class="form-label">供应商</label>
+                <select id="memory-llm-provider" class="form-select">
+                  <option value="">-- 使用默认供应商 --</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">模型</label>
+                <select id="memory-llm-model" class="form-select">
+                  <option value="">-- 使用默认模型 --</option>
+                </select>
+              </div>
+            </div>
+
+            <h3 style="font-size:var(--text-sm);font-weight:var(--font-medium);color:var(--text-muted);margin:var(--space-5) 0 var(--space-3)">Storage</h3>
+            <div class="form-group">
+              <label class="form-label">SQLite Path</label>
+              <input id="memory-sqlite-path" class="form-input" type="text" placeholder="./data/memory.db">
+            </div>
+
+            <h3 style="font-size:var(--text-sm);font-weight:var(--font-medium);color:var(--text-muted);margin:var(--space-5) 0 var(--space-3)">Search</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Max Memories</label>
+                <input id="memory-search-maxMemories" class="form-input" type="number" placeholder="5">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Min Score</label>
+                <input id="memory-search-minScore" class="form-input" type="number" step="0.1" placeholder="0.3">
+              </div>
+            </div>
+
+            <h3 style="font-size:var(--text-sm);font-weight:var(--font-medium);color:var(--text-muted);margin:var(--space-5) 0 var(--space-3)">Lifecycle</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Max Memories Per User</label>
+                <input id="memory-lifecycle-maxMemoriesPerUser" class="form-input" type="number" placeholder="500">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Summary Trigger Rounds</label>
+                <input id="memory-lifecycle-summaryTriggerRounds" class="form-input" type="number" placeholder="15">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Memory Data Page -->
+      <div id="page-memory-data" class="page">
+        <div class="card" style="margin-bottom:var(--space-4)">
+          <div class="card-header">
+            <div>
+              <div class="card-title">记忆数据</div>
+              <div class="card-description">浏览和管理用户的记忆数据</div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">选择用户</label>
+            <div style="display:flex;gap:var(--space-3);align-items:center">
+              <select id="memdata-userId" class="form-select" style="flex:1">
+                <option value="">-- 请选择用户 --</option>
               </select>
-              <select id="providers.defaults.llm.modelId" style="flex:1;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
-                <option value="">-- 选择模型 --</option>
+              <button class="btn btn-sm btn-secondary" onclick="window._memdata.refresh()">刷新</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div id="memdata-stats" class="mem-stats" style="display:none"></div>
+
+        <!-- Actions -->
+        <div id="memdata-actions" class="mem-actions" style="display:none">
+          <select id="memdata-filter" class="form-select" style="width:auto">
+            <option value="">全部类型</option>
+            <option value="summary">摘要 (summary)</option>
+            <option value="preference">偏好 (preference)</option>
+            <option value="event">事件 (event)</option>
+            <option value="context">上下文 (context)</option>
+          </select>
+          <button class="btn btn-sm btn-secondary" onclick="window._memdata.export()">📥 导出数据</button>
+          <button class="btn btn-sm btn-danger" onclick="window._memdata.deleteAll()">🗑️ 清空该用户</button>
+        </div>
+
+        <!-- Memory list -->
+        <div id="memdata-list"></div>
+      </div>
+
+      <!-- Plugins Page -->
+      <div id="page-plugins" class="page">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">插件管理</div>
+              <div class="card-description">启用或禁用插件</div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Enabled Plugins</label>
+            <div id="plugins-enabled" class="list-editor"></div>
+            <button class="btn-add" onclick="window._plugins.add('plugins-enabled')">+ 添加插件</button>
+          </div>
+          <div class="form-group" style="margin-top:var(--space-4)">
+            <label class="form-label">Disabled Plugins</label>
+            <div id="plugins-disabled" class="list-editor"></div>
+            <button class="btn-add" onclick="window._plugins.add('plugins-disabled')">+ 添加插件</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rules Page -->
+      <div id="page-rules" class="page">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">规则配置</div>
+              <div class="card-description">正则匹配规则，匹配后自动回复</div>
+            </div>
+          </div>
+          <div id="rules-list"></div>
+          <button class="btn-add" onclick="window._rules.add()">+ 添加规则</button>
+        </div>
+      </div>
+
+      <!-- Search Page -->
+      <div id="page-search" class="page">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">搜索功能</div>
+              <div class="card-description">配置 AI 搜索互联网信息</div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-checkbox">
+              <input type="checkbox" id="search-enabled">
+              <span>启用搜索功能</span>
+            </label>
+            <div class="form-hint">允许 AI 搜索互联网信息</div>
+          </div>
+
+          <div id="search-config-fields" style="opacity:0.5;pointer-events:none">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">默认搜索源</label>
+                <select id="search-provider" class="form-select">
+                  <option value="duckduckgo">DuckDuckGo (免费，无限)</option>
+                  <option value="you">You.com (免费，100次/天)</option>
+                  <option value="brave">Brave ($5免费/月)</option>
+                  <option value="tavily">Tavily (1000次/月)</option>
+                  <option value="exa">Exa.ai (1000次/月)</option>
+                  <option value="serpapi">SerpAPI (100次/月)</option>
+                  <option value="bing">Bing (已退役)</option>
+                  <option value="google">Google (已关闭注册)</option>
+                </select>
+                <div class="form-hint">选择默认的搜索引擎</div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">备用搜索源</label>
+                <select id="search-fallback" class="form-select">
+                  <option value="">无</option>
+                  <option value="duckduckgo">DuckDuckGo (免费)</option>
+                  <option value="you">You.com (免费)</option>
+                  <option value="brave">Brave</option>
+                  <option value="tavily">Tavily</option>
+                  <option value="exa">Exa.ai</option>
+                  <option value="serpapi">SerpAPI</option>
+                </select>
+                <div class="form-hint">主搜索源失败时使用</div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">API Key</label>
+              <input id="search-apiKey" class="form-input" type="password" placeholder="留空则使用环境变量">
+              <div class="form-hint">搜索源的 API Key（自动保存到 .env）</div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">默认结果数</label>
+                <input id="search-defaultLimit" class="form-input" type="number" placeholder="5" min="1" max="10">
+              </div>
+              <div class="form-group">
+                <label class="form-label">搜索区域</label>
+                <select id="search-region" class="form-select">
+                  <option value="">自动</option>
+                  <option value="cn">中国</option>
+                  <option value="us">美国</option>
+                  <option value="jp">日本</option>
+                  <option value="kr">韩国</option>
+                </select>
+                <div class="form-hint">影响搜索结果的地域偏好</div>
+              </div>
+            </div>
+
+            <!-- Provider status -->
+            <div class="card" style="margin-top:var(--space-5);background:var(--surface-0)">
+              <h3 style="font-size:var(--text-sm);font-weight:var(--font-medium);color:var(--text-muted);margin-bottom:var(--space-3)">搜索源状态</h3>
+              <div id="search-providers-list" style="display:grid;gap:var(--space-2)"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Page -->
+      <div id="page-admin" class="page">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">管理员配置</div>
+              <div class="card-description">管理管理员用户和命令</div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Admin User IDs</label>
+            <div id="admin-userIds" class="list-editor"></div>
+            <button class="btn-add" onclick="window._admin.add('admin-userIds')">+ 添加用户</button>
+          </div>
+          <div class="form-group" style="margin-top:var(--space-4)">
+            <label class="form-label">Commands</label>
+            <div id="admin-commands" class="list-editor"></div>
+            <button class="btn-add" onclick="window._admin.add('admin-commands')">+ 添加命令</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings Page -->
+      <div id="page-settings" class="page">
+        <div class="card" style="margin-bottom:var(--space-4)">
+          <div class="card-header">
+            <div class="card-title">Server</div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Host</label>
+              <input id="server-host" class="form-input" type="text" placeholder="0.0.0.0">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Port</label>
+              <input id="server-port" class="form-input" type="number" placeholder="8080">
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:var(--space-4)">
+          <div class="card-header">
+            <div class="card-title">OneBot</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">URL</label>
+            <input id="onebot-url" class="form-input" type="text" placeholder="http://127.0.0.1:3000">
+            <div class="form-hint">OneBot 实现的 HTTP 地址</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Access Token</label>
+            <input id="onebot-accessToken" class="form-input" type="password" placeholder="留空表示无需认证">
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:var(--space-4)">
+          <div class="card-header">
+            <div class="card-title">Storage</div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Type</label>
+              <select id="storage-type" class="form-select">
+                <option value="sqlite">SQLite</option>
+                <option value="memory">Memory</option>
               </select>
             </div>
-            <div class="field-hint">用于 AI 对话的主要 LLM</div>
-          </div>
-          <div class="field">
-            <label>默认 Embedding</label>
-            <div style="display:flex;gap:8px">
-              <select id="providers.defaults.embedding.providerId" style="flex:1;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
-                <option value="">-- 选择供应商 --</option>
-              </select>
-              <select id="providers.defaults.embedding.modelId" style="flex:1;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
-                <option value="">-- 选择模型 --</option>
-              </select>
+            <div class="form-group">
+              <label class="form-label">Path</label>
+              <input id="storage-path" class="form-input" type="text" placeholder="data/bot.db">
             </div>
-            <div class="field-hint">用于记忆向量化</div>
-          </div>
-        </div>
-        <div class="field">
-          <label>Embedding 维度</label>
-          <input id="providers.defaults.embedding.dimension" type="number" placeholder="1024" style="width:200px">
-          <div class="field-hint">向量维度，如 bge-large-zh-v1.5 为 1024</div>
-        </div>
-      </div>
-
-      <!-- Provider List -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-        <h3 style="font-size:15px;color:var(--text-dim)">供应商列表</h3>
-        <button class="btn btn-sm btn-outline" onclick="addProvider()">+ 新增供应商</button>
-      </div>
-
-      <div id="providers.list"></div>
-    </div>
-
-    <!-- Storage -->
-    <div id="sec-storage" class="section">
-      <h2>💾 Storage</h2>
-      <div class="field-row">
-        <div class="field">
-          <label>Type</label>
-          <select id="storage.type">
-            <option value="sqlite">SQLite</option>
-            <option value="memory">Memory</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Path</label>
-          <input id="storage.path" type="text" placeholder="data/bot.db">
-        </div>
-      </div>
-    </div>
-
-    <!-- Plugins -->
-    <div id="sec-plugins" class="section">
-      <h2>🧩 Plugins</h2>
-      <div class="field">
-        <label>Enabled Plugins</label>
-        <div id="plugins.enabled" class="list-editor"></div>
-        <button class="btn-add" onclick="addListItem('plugins.enabled','')">+ 添加插件</button>
-      </div>
-      <div class="field" style="margin-top:16px">
-        <label>Disabled Plugins</label>
-        <div id="plugins.disabled" class="list-editor"></div>
-        <button class="btn-add" onclick="addListItem('plugins.disabled','')">+ 添加插件</button>
-      </div>
-    </div>
-
-    <!-- Persona -->
-    <div id="sec-persona" class="section">
-      <h2>🎭 Persona</h2>
-      <div class="field">
-        <label>Default Persona</label>
-        <textarea id="persona.default" rows="6" placeholder="你是一个友好的助手..."></textarea>
-        <div class="field-hint">Bot 的默认人格设定</div>
-      </div>
-      <div class="field" style="margin-top:20px">
-        <label>User Personas</label>
-        <div class="field-hint" style="margin-bottom:12px">为特定用户设置独立人格（优先级高于默认）</div>
-        <div id="persona.users" class="list-editor"></div>
-        <button class="btn-add" onclick="addPersonaUser()">+ 添加用户人格</button>
-      </div>
-    </div>
-
-    <!-- Memory -->
-    <div id="sec-memory" class="section">
-      <h2>🧠 Memory</h2>
-      <div class="field">
-        <label>
-          <input type="checkbox" id="memory.enabled" style="width:auto;margin-right:8px">
-          Enable Memory System
-        </label>
-        <div class="field-hint">启用长期记忆功能（基于向量检索）</div>
-      </div>
-
-      <div id="memory-config-fields" style="margin-top:20px;opacity:0.5;pointer-events:none">
-        <!-- Embedding Provider -->
-        <div style="background:var(--input-bg);border:1px solid var(--input-border);border-radius:10px;padding:16px;margin-bottom:16px">
-          <h3 style="font-size:15px;margin-bottom:12px;color:var(--text-dim)">Embedding 供应商</h3>
-          <div class="field-hint" style="margin-bottom:12px">用于向量化记忆，在 Providers 页面配置</div>
-          <div class="field">
-            <label>供应商</label>
-            <select id="memory.embedding.providerId" onchange="onMemoryProviderChange('embedding', this.value)">
-              <option value="">-- 使用默认供应商 --</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>模型</label>
-            <select id="memory.embedding.model">
-              <option value="">-- 使用默认模型 --</option>
-            </select>
           </div>
         </div>
 
-        <!-- LLM Provider for Summary -->
-        <div style="background:var(--input-bg);border:1px solid var(--input-border);border-radius:10px;padding:16px;margin-bottom:16px">
-          <h3 style="font-size:15px;margin-bottom:12px;color:var(--text-dim)">LLM 供应商（摘要压缩）</h3>
-          <div class="field-hint" style="margin-bottom:12px">用于记忆摘要和压缩，在 Providers 页面配置</div>
-          <div class="field">
-            <label>供应商</label>
-            <select id="memory.llm.providerId" onchange="onMemoryProviderChange('llm', this.value)">
-              <option value="">-- 使用默认供应商 --</option>
-            </select>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Context</div>
           </div>
-          <div class="field">
-            <label>模型</label>
-            <select id="memory.llm.model">
-              <option value="">-- 使用默认模型 --</option>
-            </select>
-          </div>
-        </div>
-
-        <h3 style="font-size:15px;margin:20px 0 16px;color:var(--text-dim)">Storage Services</h3>
-        <div class="field">
-          <label>SQLite Path</label>
-          <input id="memory.sqlite.path" type="text" placeholder="./data/memory.db">
-        </div>
-
-        <h3 style="font-size:15px;margin:20px 0 16px;color:var(--text-dim)">Search Settings</h3>
-        <div class="field-row">
-          <div class="field">
-            <label>Max Memories</label>
-            <input id="memory.search.maxMemories" type="number" placeholder="5">
-          </div>
-          <div class="field">
-            <label>Min Score</label>
-            <input id="memory.search.minScore" type="number" step="0.1" placeholder="0.3">
-          </div>
-        </div>
-
-        <h3 style="font-size:15px;margin:20px 0 16px;color:var(--text-dim)">Lifecycle</h3>
-        <div class="field-row">
-          <div class="field">
-            <label>Max Memories Per User</label>
-            <input id="memory.lifecycle.maxMemoriesPerUser" type="number" placeholder="500">
-          </div>
-          <div class="field">
-            <label>Summary Trigger Rounds</label>
-            <input id="memory.lifecycle.summaryTriggerRounds" type="number" placeholder="15">
+          <div class="form-group">
+            <label class="form-label">History Limit</label>
+            <input id="context-historyLimit" class="form-input" type="number" placeholder="10">
+            <div class="form-hint">每次对话携带的历史消息轮数</div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Memory Data -->
-    <div id="sec-memdata" class="section">
-      <h2>📊 记忆数据</h2>
-
-      <div class="field" style="margin-bottom:20px">
-        <label>选择用户</label>
-        <div style="display:flex;gap:12px;align-items:center">
-          <select id="memdata.userId" style="flex:1;padding:10px 12px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:8px;color:var(--text);font-size:14px">
-            <option value="">-- 请选择用户 --</option>
-          </select>
-          <button class="btn btn-sm btn-secondary" onclick="loadMemUsers()">刷新</button>
-        </div>
-      </div>
-
-      <!-- Stats -->
-      <div id="memdata.stats" style="display:none;margin-bottom:20px">
-        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px">
-          <div style="background:var(--input-bg);border:1px solid var(--input-border);border-radius:8px;padding:16px 24px;min-width:120px;text-align:center">
-            <div style="font-size:24px;font-weight:600;color:var(--primary)" id="memdata.statTotal">0</div>
-            <div style="font-size:12px;color:var(--text-dim);margin-top:4px">总记忆数</div>
-          </div>
-          <div id="memdata.statTypes" style="display:flex;gap:12px;flex-wrap:wrap"></div>
-        </div>
-      </div>
-
-      <!-- Actions -->
-      <div id="memdata.actions" style="display:none;margin-bottom:20px;gap:12px;flex-wrap:wrap">
-        <select id="memdata.filter" onchange="loadMemData()" style="padding:8px 12px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:8px;color:var(--text);font-size:13px">
-          <option value="">全部类型</option>
-          <option value="summary">摘要 (summary)</option>
-          <option value="preference">偏好 (preference)</option>
-          <option value="event">事件 (event)</option>
-          <option value="context">上下文 (context)</option>
-        </select>
-        <button class="btn btn-sm btn-secondary" onclick="exportUserData()">📥 导出数据</button>
-        <button class="btn btn-sm btn-danger" onclick="deleteAllUserData()">🗑️ 清空该用户</button>
-      </div>
-
-      <!-- Memory list -->
-      <div id="memdata.list"></div>
-    </div>
-
-    <!-- Admin -->
-    <div id="sec-admin" class="section">
-      <h2>🛡️ Admin</h2>
-      <div class="field">
-        <label>Admin User IDs</label>
-        <div id="admin.userIds" class="list-editor"></div>
-        <button class="btn-add" onclick="addListItem('admin.userIds','')">+ 添加用户</button>
-      </div>
-      <div class="field" style="margin-top:16px">
-        <label>Commands</label>
-        <div id="admin.commands" class="list-editor"></div>
-        <button class="btn-add" onclick="addListItem('admin.commands','')">+ 添加命令</button>
-      </div>
-    </div>
-
-    <!-- Context -->
-    <div id="sec-context" class="section">
-      <h2>💬 Context</h2>
-      <div class="field">
-        <label>History Limit</label>
-        <input id="context.historyLimit" type="number" placeholder="10">
-        <div class="field-hint">每次对话携带的历史消息轮数</div>
-      </div>
-    </div>
-
-    <!-- Rules -->
-    <div id="sec-rules" class="section">
-      <h2>📋 Rules</h2>
-      <div class="field-hint" style="margin-bottom:12px">正则匹配规则，匹配后自动回复</div>
-      <div id="rules.list" class="rules-table"></div>
-      <button class="btn-add" onclick="addRule()">+ 添加规则</button>
-    </div>
-
-    <!-- Tools / Search -->
-    <div id="sec-tools" class="section">
-      <h2>🔍 搜索功能</h2>
-      <div class="field">
-        <label>
-          <input type="checkbox" id="tools.search.enabled" style="width:auto;margin-right:8px">
-          启用搜索功能
-        </label>
-        <div class="field-hint">允许 AI 搜索互联网信息</div>
-      </div>
-
-      <div id="search-config-fields" style="margin-top:20px;opacity:0.5;pointer-events:none">
-        <div class="field-row">
-          <div class="field">
-            <label>默认搜索源</label>
-            <select id="tools.search.provider">
-              <option value="duckduckgo">DuckDuckGo (免费，无限)</option>
-              <option value="you">You.com (免费，100次/天)</option>
-              <option value="brave">Brave ($5免费/月)</option>
-              <option value="tavily">Tavily (1000次/月)</option>
-              <option value="exa">Exa.ai (1000次/月)</option>
-              <option value="serpapi">SerpAPI (100次/月)</option>
-              <option value="bing">Bing (已退役)</option>
-              <option value="google">Google (已关闭注册)</option>
-            </select>
-            <div class="field-hint">选择默认的搜索引擎</div>
-          </div>
-          <div class="field">
-            <label>备用搜索源</label>
-            <select id="tools.search.fallback">
-              <option value="">无</option>
-              <option value="duckduckgo">DuckDuckGo (免费)</option>
-              <option value="you">You.com (免费)</option>
-              <option value="brave">Brave</option>
-              <option value="tavily">Tavily</option>
-              <option value="exa">Exa.ai</option>
-              <option value="serpapi">SerpAPI</option>
-            </select>
-            <div class="field-hint">主搜索源失败时使用</div>
-          </div>
-        </div>
-
-        <div class="field">
-          <label>API Key</label>
-          <input id="tools.search.apiKey" type="password" placeholder="留空则使用环境变量">
-          <div class="field-hint">搜索源的 API Key（自动保存到 .env）</div>
-        </div>
-
-        <div class="field-row">
-          <div class="field">
-            <label>默认结果数</label>
-            <input id="tools.search.defaultLimit" type="number" placeholder="5" min="1" max="10">
-          </div>
-          <div class="field">
-            <label>搜索区域</label>
-            <select id="tools.search.region">
-              <option value="">自动</option>
-              <option value="cn">中国</option>
-              <option value="us">美国</option>
-              <option value="jp">日本</option>
-              <option value="kr">韩国</option>
-            </select>
-            <div class="field-hint">影响搜索结果的地域偏好</div>
-          </div>
-        </div>
-
-        <!-- 搜索源状态 -->
-        <div class="search-providers-status" style="margin-top:24px">
-          <h3 style="font-size:15px;margin-bottom:12px;color:var(--text-dim)">搜索源状态</h3>
-          <div id="search-providers-list" style="display:grid;gap:8px"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="actions">
-      <button class="btn btn-secondary" onclick="loadConfig()">重置</button>
-      <button class="btn btn-primary" onclick="saveConfig()">💾 保存</button>
     </div>
   </main>
 </div>
 
-<div id="toast" class="toast"></div>
+<!-- App Entry Point -->
+<script type="module" src="js/app.js"></script>
 
-<script>
-// ── State ──
-let config = {};
-let persona = { default: '', users: {} };
-let activeProviderKey = '';
-
-// ── Sidebar navigation ──
-document.querySelectorAll('.sidebar-item').forEach(item => {
-  item.addEventListener('click', () => {
-    document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
-    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-    item.classList.add('active');
-    document.getElementById('sec-' + item.dataset.section).classList.add('active');
-  });
-});
-
-// ── Load config ──
-async function loadConfig() {
-  try {
-    const [configRes, personaRes] = await Promise.all([
-      fetch('/api/config'),
-      fetch('/api/persona'),
-    ]);
-
-    const configJson = await configRes.json();
-    if (!configJson.success) throw new Error(configJson.error);
-    config = configJson.data;
-
-    const personaJson = await personaRes.json();
-    if (personaJson.success) {
-      persona = personaJson.data;
-    }
-
-    renderConfig();
-    renderPersona();
-    document.getElementById('status').textContent = 'Loaded';
-  } catch (e) {
-    toast('加载失败: ' + e.message, 'error');
-    document.getElementById('status').textContent = 'Error';
-  }
-}
-
-// ── Render config ──
-function renderConfig() {
-  setVal('server.host', config.server?.host);
-  setVal('server.port', config.server?.port);
-  setVal('onebot.url', config.onebot?.url);
-  setVal('onebot.accessToken', config.onebot?.accessToken);
-  setVal('storage.type', config.storage?.type);
-  setVal('storage.path', config.storage?.path);
-  setVal('context.historyLimit', config.context?.historyLimit);
-
-  renderList('plugins.enabled', config.plugins?.enabled ?? []);
-  renderList('plugins.disabled', config.plugins?.disabled ?? []);
-  renderList('admin.userIds', config.admin?.userIds ?? []);
-  renderList('admin.commands', config.admin?.commands ?? []);
-  renderRules(config.rules ?? []);
-
-  // Providers (unified LLM + Embedding)
-  renderProviders();
-
-  // Memory
-  renderMemory();
-
-  // Search
-  renderSearch();
-}
-
-// ── Memory ──
-function renderMemory() {
-  const mem = config.memory;
-  const providers = config.providers?.list ?? [];
-  const defaults = config.providers?.defaults ?? {};
-  const enabled = mem?.enabled ?? false;
-
-  const checkbox = document.getElementById('memory.enabled');
-  checkbox.checked = enabled;
-  toggleMemoryFields(enabled);
-
-  checkbox.onchange = () => toggleMemoryFields(checkbox.checked);
-
-  // Populate embedding provider dropdown
-  const embProviderSelect = document.getElementById('memory.embedding.providerId');
-  embProviderSelect.innerHTML = '<option value="">-- 使用默认供应商 --</option>';
-  providers.forEach(p => {
-    const hasEmbedding = p.models?.some(m => m.purpose === 'embedding' || m.purpose === 'both');
-    if (hasEmbedding || p.type === 'openai') {
-      embProviderSelect.innerHTML += `<option value="${esc(p.id)}">${esc(p.id)} (${p.type})</option>`;
-    }
-  });
-
-  // Populate LLM provider dropdown
-  const llmProviderSelect = document.getElementById('memory.llm.providerId');
-  llmProviderSelect.innerHTML = '<option value="">-- 使用默认供应商 --</option>';
-  providers.forEach(p => {
-    const hasLLM = p.models?.some(m => m.purpose === 'llm' || m.purpose === 'both');
-    if (hasLLM || p.type === 'openai') {
-      llmProviderSelect.innerHTML += `<option value="${esc(p.id)}">${esc(p.id)} (${p.type})</option>`;
-    }
-  });
-
-  // Set current values
-  const currentEmbProvider = mem?.embedding?.providerId || defaults.embedding?.providerId || '';
-  const currentLlmProvider = mem?.llm?.providerId || defaults.llm?.providerId || '';
-
-  embProviderSelect.value = currentEmbProvider;
-  llmProviderSelect.value = currentLlmProvider;
-
-  // Update model dropdowns
-  updateMemoryModelDropdown('embedding', currentEmbProvider, mem?.embedding?.model);
-  updateMemoryModelDropdown('llm', currentLlmProvider, mem?.llm?.model);
-
-  // Set other fields
-  setVal('memory.sqlite.path', mem?.sqlite?.path);
-  setVal('memory.search.maxMemories', mem?.search?.maxMemories);
-  setVal('memory.search.minScore', mem?.search?.minScore);
-  setVal('memory.lifecycle.maxMemoriesPerUser', mem?.lifecycle?.maxMemoriesPerUser);
-  setVal('memory.lifecycle.summaryTriggerRounds', mem?.lifecycle?.summaryTriggerRounds);
-}
-
-function updateMemoryModelDropdown(purpose, providerId, selectedModel) {
-  const selectId = `memory.${purpose}.model`;
-  const select = document.getElementById(selectId);
-  if (!select) return;
-
-  select.innerHTML = '<option value="">-- 使用默认模型 --</option>';
-
-  const providers = config.providers?.list ?? [];
-  const defaults = config.providers?.defaults ?? {};
-
-  if (!providerId) {
-    // Use defaults
-    const defaultProvider = providers.find(p => p.id === defaults[purpose]?.providerId);
-    if (defaultProvider?.models) {
-      defaultProvider.models.forEach(m => {
-        if (purpose === 'embedding' && (m.purpose === 'embedding' || m.purpose === 'both')) {
-          select.innerHTML += `<option value="${esc(m.id)}">${esc(m.id)}${m.dimension ? ` (${m.dimension}d)` : ''}</option>`;
-        } else if (purpose === 'llm' && (m.purpose === 'llm' || m.purpose === 'both')) {
-          select.innerHTML += `<option value="${esc(m.id)}">${esc(m.id)}</option>`;
-        }
-      });
-    }
-    select.value = defaults[purpose]?.modelId || '';
-  } else {
-    // Use selected provider
-    const provider = providers.find(p => p.id === providerId);
-    if (provider?.models) {
-      provider.models.forEach(m => {
-        if (purpose === 'embedding' && (m.purpose === 'embedding' || m.purpose === 'both')) {
-          select.innerHTML += `<option value="${esc(m.id)}">${esc(m.id)}${m.dimension ? ` (${m.dimension}d)` : ''}</option>`;
-        } else if (purpose === 'llm' && (m.purpose === 'llm' || m.purpose === 'both')) {
-          select.innerHTML += `<option value="${esc(m.id)}">${esc(m.id)}</option>`;
-        }
-      });
-    }
-    if (selectedModel) {
-      select.value = selectedModel;
-    }
-  }
-}
-
-function onMemoryProviderChange(purpose, providerId) {
-  updateMemoryModelDropdown(purpose, providerId, '');
-}
-
-function toggleMemoryFields(enabled) {
-  const fields = document.getElementById('memory-config-fields');
-  fields.style.opacity = enabled ? '1' : '0.5';
-  fields.style.pointerEvents = enabled ? 'auto' : 'none';
-}
-
-function collectMemory() {
-  const enabled = document.getElementById('memory.enabled')?.checked ?? false;
-  if (!enabled) {
-    return { enabled: false };
-  }
-
-  const embeddingProviderId = document.getElementById('memory.embedding.providerId')?.value || undefined;
-  const embeddingModel = document.getElementById('memory.embedding.model')?.value || undefined;
-  const llmProviderId = document.getElementById('memory.llm.providerId')?.value || undefined;
-  const llmModel = document.getElementById('memory.llm.model')?.value || undefined;
-
-  return {
-    enabled: true,
-    embedding: {
-      providerId: embeddingProviderId,
-      model: embeddingModel,
-    },
-    llm: llmProviderId ? {
-      providerId: llmProviderId,
-      model: llmModel,
-    } : undefined,
-    sqlite: {
-      path: document.getElementById('memory.sqlite.path')?.value || './data/memory.db',
-    },
-    search: {
-      maxMemories: parseInt(document.getElementById('memory.search.maxMemories')?.value) || 5,
-      minScore: parseFloat(document.getElementById('memory.search.minScore')?.value) || 0.3,
-    },
-    lifecycle: {
-      maxMemoriesPerUser: parseInt(document.getElementById('memory.lifecycle.maxMemoriesPerUser')?.value) || 500,
-      summaryTriggerRounds: parseInt(document.getElementById('memory.lifecycle.summaryTriggerRounds')?.value) || 15,
-    },
-  };
-}
-
-// ── Search / Tools ──
-const SEARCH_PROVIDERS = [
-  { id: 'duckduckgo', name: 'DuckDuckGo', desc: '免费搜索', needsKey: false, envKey: null, free: '无限', registerUrl: null },
-  { id: 'you', name: 'You.com', desc: 'AI 搜索', needsKey: false, envKey: 'YOU_API_KEY（可选）', free: '100/天', registerUrl: 'https://you.com/platform' },
-  { id: 'brave', name: 'Brave', desc: '隐私搜索', needsKey: true, envKey: 'BRAVE_API_KEY', free: '1000/月', registerUrl: 'https://api.search.brave.com/' },
-  { id: 'tavily', name: 'Tavily', desc: 'AI 优化搜索', needsKey: true, envKey: 'TAVILY_API_KEY', free: '1000/月', registerUrl: 'https://tavily.com' },
-  { id: 'exa', name: 'Exa.ai', desc: '语义搜索', needsKey: true, envKey: 'EXA_API_KEY', free: '1000/月', registerUrl: 'https://exa.ai' },
-  { id: 'serpapi', name: 'SerpAPI', desc: 'Google 搜索', needsKey: true, envKey: 'SERPAPI_API_KEY', free: '100/月', registerUrl: 'https://serpapi.com' },
-  { id: 'bing', name: 'Bing', desc: '微软搜索（已退役）', needsKey: true, envKey: 'BING_API_KEY', free: '已退役', registerUrl: null },
-  { id: 'google', name: 'Google', desc: 'Custom Search（已关闭）', needsKey: true, envKey: 'GOOGLE_API_KEY + GOOGLE_CX', free: '已关闭注册', registerUrl: null },
-];
-
-function renderSearch() {
-  const search = config.tools?.search;
-  const enabled = search?.enabled ?? false;
-
-  const checkbox = document.getElementById('tools.search.enabled');
-  checkbox.checked = enabled;
-  toggleSearchFields(enabled);
-
-  checkbox.onchange = () => toggleSearchFields(checkbox.checked);
-
-  setVal('tools.search.provider', search?.provider || 'duckduckgo');
-  setVal('tools.search.fallback', search?.fallback || '');
-  setVal('tools.search.apiKey', search?.apiKey);
-  setVal('tools.search.defaultLimit', search?.defaultLimit);
-  setVal('tools.search.region', search?.region);
-
-  renderSearchProviders();
-}
-
-function toggleSearchFields(enabled) {
-  const fields = document.getElementById('search-config-fields');
-  fields.style.opacity = enabled ? '1' : '0.5';
-  fields.style.pointerEvents = enabled ? 'auto' : 'none';
-}
-
-function renderSearchProviders() {
-  const container = document.getElementById('search-providers-list');
-  const envKeys = Object.keys(config._env || {});
-
-  container.innerHTML = SEARCH_PROVIDERS.map(p => {
-    const hasKey = !p.needsKey || envKeys.some(k => p.envKey?.includes(k));
-    const status = p.needsKey
-      ? (hasKey ? '✅' : '⚠️')
-      : '✅';
-    const statusColor = p.needsKey
-      ? (hasKey ? 'var(--success)' : 'var(--primary)')
-      : 'var(--success)';
-
-    const registerLink = p.registerUrl
-      ? `<a href="${p.registerUrl}" target="_blank" style="color:var(--primary);text-decoration:none;font-size:11px;margin-left:8px">注册</a>`
-      : '';
-
-    return `
-      <div style="display:flex;align-items:center;padding:8px 12px;background:var(--input-bg);border-radius:6px;font-size:13px">
-        <span style="margin-right:8px">${status}</span>
-        <span style="font-weight:500;min-width:80px">${p.name}</span>
-        <span style="color:var(--text-dim);flex:1">${p.desc}</span>
-        <span style="color:var(--text-dim);font-size:11px">${p.needsKey ? p.envKey : '无需 Key'}</span>
-        <span style="color:${statusColor};margin-left:12px;font-size:12px;min-width:60px;text-align:right">${p.free}</span>
-        ${registerLink}
-      </div>
-    `;
-  }).join('');
-}
-
-function collectSearch() {
-  const enabled = document.getElementById('tools.search.enabled')?.checked ?? false;
-  if (!enabled) {
-    return { enabled: false, provider: 'duckduckgo' };
-  }
-
-  const provider = document.getElementById('tools.search.provider')?.value || 'duckduckgo';
-  const fallback = document.getElementById('tools.search.fallback')?.value || undefined;
-  const apiKey = document.getElementById('tools.search.apiKey')?.value || undefined;
-  const defaultLimit = parseInt(document.getElementById('tools.search.defaultLimit')?.value) || undefined;
-  const region = document.getElementById('tools.search.region')?.value || undefined;
-
-  return {
-    enabled: true,
-    provider,
-    ...(fallback ? { fallback } : {}),
-    ...(apiKey ? { apiKey } : {}),
-    ...(defaultLimit ? { defaultLimit } : {}),
-    ...(region ? { region } : {}),
-  };
-}
-
-function setVal(id, val) {
-  const el = document.getElementById(id);
-  if (el && val !== undefined) el.value = val;
-}
-
-// ── Persona ──
-function renderPersona() {
-  setVal('persona.default', persona.default);
-
-  const container = document.getElementById('persona.users');
-  container.innerHTML = '';
-
-  const users = persona.users || {};
-  Object.entries(users).forEach(([userId, content]) => {
-    container.appendChild(createPersonaRow(userId, content));
-  });
-}
-
-function createPersonaRow(userId, content) {
-  const row = document.createElement('div');
-  row.className = 'persona-row';
-  row.style.cssText = 'display:flex;flex-direction:column;gap:8px;padding:12px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:8px;margin-bottom:8px';
-  row.innerHTML = `
-    <div style="display:flex;gap:8px;align-items:center">
-      <input type="text" value="${esc(userId)}" placeholder="User ID" style="flex:1;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px">
-      <button class="btn btn-sm btn-danger" onclick="this.parentElement.parentElement.remove()">删除</button>
-    </div>
-    <textarea rows="3" placeholder="人格设定" style="width:100%;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;resize:vertical">${esc(content)}</textarea>
-  `;
-  return row;
-}
-
-function addPersonaUser() {
-  const container = document.getElementById('persona.users');
-  container.appendChild(createPersonaRow('', ''));
-}
-
-function collectPersona() {
-  const defaultPersona = document.getElementById('persona.default')?.value || '';
-
-  const users = {};
-  document.querySelectorAll('#persona.users .persona-row').forEach(row => {
-    const userId = row.querySelector('input')?.value?.trim();
-    const content = row.querySelector('textarea')?.value?.trim();
-    if (userId && content) {
-      users[userId] = content;
-    }
-  });
-
-  return { default: defaultPersona, users };
-}
-
-// ── LLM Presets ──
-const LLM_PRESETS = {
-  'OpenAI': { type: 'openai', baseUrl: 'https://api.openai.com/v1', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'] },
-  'DeepSeek': { type: 'openai', baseUrl: 'https://api.deepseek.com/v1', models: ['deepseek-chat', 'deepseek-reasoner'] },
-  'SiliconFlow': { type: 'openai', baseUrl: 'https://api.siliconflow.cn/v1', models: ['Qwen/Qwen2.5-7B-Instruct', 'deepseek-ai/DeepSeek-V2.5'] },
-  'Moonshot': { type: 'openai', baseUrl: 'https://api.moonshot.cn/v1', models: ['moonshot-v1-8k', 'moonshot-v1-32k', 'moonshot-v1-128k'] },
-  'Zhipu': { type: 'openai', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', models: ['glm-4', 'glm-4-flash', 'glm-3-turbo'] },
-  'Ollama (本地)': { type: 'ollama', baseUrl: 'http://localhost:11434', models: ['llama3', 'qwen2', 'deepseek-v2'] },
-};
-
-function applyPreset(providerName, presetName) {
-  const preset = LLM_PRESETS[presetName];
-  if (!preset) return;
-
-  const card = document.querySelector(`.provider-card[data-name="${providerName}"]`);
-  if (!card) return;
-
-  const baseUrlInput = card.querySelector('[data-field="baseUrl"]');
-  if (baseUrlInput) baseUrlInput.value = preset.baseUrl;
-
-  // Update model datalist
-  const datalist = document.getElementById(`models-${providerName}`);
-  if (datalist) {
-    datalist.innerHTML = '';
-    preset.models.forEach(m => {
-      const opt = document.createElement('option');
-      opt.value = m;
-      datalist.appendChild(opt);
-    });
-  }
-
-  toast(`已应用 ${presetName} 预设`, 'success');
-}
-
-// ── Providers ──
-function renderProviders() {
-  const providers = config.providers?.list ?? [];
-  const defaults = config.providers?.defaults ?? {};
-
-  // Update default dropdowns
-  updateDefaultDropdowns(providers, defaults);
-
-  // Provider cards
-  const container = document.getElementById('providers.list');
-  container.innerHTML = '';
-
-  if (providers.length === 0) {
-    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-dim)">暂无供应商，点击"新增供应商"添加</div>';
-    return;
-  }
-
-  providers.forEach((p, index) => {
-    const card = document.createElement('div');
-    card.className = 'provider-card';
-    card.dataset.index = index;
-    card.innerHTML = `
-      <div class="provider-card-header">
-        <div style="display:flex;align-items:center;gap:12px">
-          <h3>${esc(p.id)}</h3>
-          <span class="type-badge" style="background:${p.type === 'ollama' ? '#2d7a4a' : '#2d4a7a'};color:${p.type === 'ollama' ? '#7dffb3' : '#7db3ff'}">${p.type}</span>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <button class="btn btn-sm btn-outline" onclick="renameProvider(${index})">重命名</button>
-          <button class="btn btn-sm btn-danger" onclick="deleteProvider(${index})">删除</button>
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label>类型</label>
-          <select data-provider="${index}" data-field="type" onchange="onTypeChange(${index}, this.value)">
-            <option value="openai" ${p.type === 'openai' ? 'selected' : ''}>OpenAI 兼容</option>
-            <option value="ollama" ${p.type === 'ollama' ? 'selected' : ''}>Ollama</option>
-          </select>
-        </div>
-        <div class="field">
-          <label style="display:flex;align-items:center;gap:8px">
-            Base URL
-            <select onchange="applyPreset(${index}, this.value); this.value=''"
-                    style="padding:3px 8px;font-size:12px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text-dim)">
-              <option value="">选择预设...</option>
-              ${Object.keys(LLM_PRESETS).map(k => `<option value="${k}">${k}</option>`).join('')}
-            </select>
-          </label>
-          <input type="text" data-provider="${index}" data-field="baseUrl"
-                 value="${esc(p.baseUrl ?? '')}" placeholder="https://api.openai.com/v1">
-        </div>
-      </div>
-      <div class="field">
-        <label>API Key</label>
-        <input type="password" data-provider="${index}" data-field="apiKey"
-               value="${esc(p.apiKey ?? '')}" placeholder="sk-... (Ollama 留空)">
-        <div class="field-hint" id="apiKey-hint-${index}">${p.type === 'ollama' ? 'Ollama 通常不需要 API Key' : 'OpenAI 兼容接口需要 API Key'}</div>
-      </div>
-      <div class="field">
-        <label style="display:flex;align-items:center;gap:8px">
-          默认模型
-          <button class="btn btn-sm btn-outline" id="fetch-btn-${index}"
-                  onclick="fetchProviderModels(${index})" style="font-size:12px;padding:3px 10px">
-            获取模型
-          </button>
-          <span id="fetch-status-${index}" style="font-size:12px;color:var(--text-dim)"></span>
-        </label>
-        <input type="text" list="models-${index}" data-provider="${index}" data-field="defaultModel"
-               value="${esc(p.defaultModel ?? '')}" placeholder="选择或输入模型名称">
-        <datalist id="models-${index}">
-          ${(p.models ?? []).map(m => `<option value="${esc(m.id)}">${esc(m.id)}</option>`).join('')}
-        </datalist>
-      </div>
-
-      <!-- Models list -->
-      <div class="field" style="margin-top:16px">
-        <label>模型列表 (可选)</label>
-        <div class="field-hint" style="margin-bottom:8px">配置此供应商可用的模型，用于 WebUI 选择</div>
-        <div id="models-list-${index}" class="list-editor">
-          ${(p.models ?? []).map((m, mi) => `
-            <div class="list-row">
-              <input type="text" value="${esc(m.id)}" placeholder="模型 ID" data-model-index="${mi}">
-              <select style="width:100px" data-model-purpose="${mi}">
-                <option value="llm" ${m.purpose === 'llm' ? 'selected' : ''}>LLM</option>
-                <option value="embedding" ${m.purpose === 'embedding' ? 'selected' : ''}>Embedding</option>
-                <option value="both" ${m.purpose === 'both' ? 'selected' : ''}>Both</option>
-              </select>
-              <input type="number" style="width:80px" value="${m.dimension ?? ''}" placeholder="维度" data-model-dimension="${mi}">
-              <button class="btn-remove" onclick="removeModel(${index}, ${mi})">×</button>
-            </div>
-          `).join('')}
-        </div>
-        <button class="btn-add" onclick="addModel(${index})">+ 添加模型</button>
-      </div>
-    `;
-    container.appendChild(card);
-  });
-}
-
-function updateDefaultDropdowns(providers, defaults) {
-  // LLM default
-  const llmProviderSelect = document.getElementById('providers.defaults.llm.providerId');
-  const llmModelSelect = document.getElementById('providers.defaults.llm.modelId');
-  const embProviderSelect = document.getElementById('providers.defaults.embedding.providerId');
-  const embModelSelect = document.getElementById('providers.defaults.embedding.modelId');
-
-  // Save current values
-  const currentLlmProvider = llmProviderSelect.value;
-  const currentLlmModel = llmModelSelect.value;
-  const currentEmbProvider = embProviderSelect.value;
-  const currentEmbModel = embModelSelect.value;
-
-  // Clear and rebuild
-  llmProviderSelect.innerHTML = '<option value="">-- 选择供应商 --</option>';
-  embProviderSelect.innerHTML = '<option value="">-- 选择供应商 --</option>';
-
-  providers.forEach(p => {
-    llmProviderSelect.innerHTML += `<option value="${esc(p.id)}">${esc(p.id)} (${p.type})</option>`;
-    embProviderSelect.innerHTML += `<option value="${esc(p.id)}">${esc(p.id)} (${p.type})</option>`;
-  });
-
-  // Restore or set defaults
-  llmProviderSelect.value = defaults.llm?.providerId || currentLlmProvider;
-  embProviderSelect.value = defaults.embedding?.providerId || currentEmbProvider;
-
-  // Update model dropdowns
-  updateModelDropdown('llm', llmProviderSelect.value, providers, defaults.llm?.modelId || currentLlmModel);
-  updateModelDropdown('embedding', embProviderSelect.value, providers, defaults.embedding?.modelId || currentEmbModel);
-
-  // Set dimension
-  const dimensionInput = document.getElementById('providers.defaults.embedding.dimension');
-  if (dimensionInput) {
-    dimensionInput.value = defaults.embedding?.dimension ?? 1024;
-  }
-
-  // Add change handlers
-  llmProviderSelect.onchange = () => updateModelDropdown('llm', llmProviderSelect.value, providers, '');
-  embProviderSelect.onchange = () => updateModelDropdown('embedding', embProviderSelect.value, providers, '');
-}
-
-function updateModelDropdown(purpose, providerId, providers, selectedModel) {
-  const selectId = `providers.defaults.${purpose}.modelId`;
-  const select = document.getElementById(selectId);
-  if (!select) return;
-
-  select.innerHTML = '<option value="">-- 选择模型 --</option>';
-
-  const provider = providers.find(p => p.id === providerId);
-  if (provider?.models) {
-    provider.models.forEach(m => {
-      if (purpose === 'llm' && (m.purpose === 'llm' || m.purpose === 'both')) {
-        select.innerHTML += `<option value="${esc(m.id)}">${esc(m.id)}</option>`;
-      } else if (purpose === 'embedding' && (m.purpose === 'embedding' || m.purpose === 'both')) {
-        select.innerHTML += `<option value="${esc(m.id)}">${esc(m.id)}${m.dimension ? ` (${m.dimension}d)` : ''}</option>`;
-      }
-    });
-  }
-
-  if (selectedModel) {
-    select.value = selectedModel;
-  }
-}
-
-// ── Fetch models from provider ──
-async function fetchProviderModels(index) {
-  const card = document.querySelector(`.provider-card[data-index="${index}"]`);
-  if (!card) return;
-
-  const baseUrl = card.querySelector('[data-field="baseUrl"]')?.value?.trim();
-  const apiKey = card.querySelector('[data-field="apiKey"]')?.value?.trim();
-  const type = card.querySelector('[data-field="type"]')?.value || 'openai';
-
-  if (!baseUrl) {
-    toast('请先填写 Base URL', 'error');
-    return;
-  }
-
-  const statusEl = document.getElementById(`fetch-status-${index}`);
-  const btnEl = document.getElementById(`fetch-btn-${index}`);
-  if (statusEl) statusEl.textContent = '获取中...';
-  if (btnEl) btnEl.disabled = true;
-
-  try {
-    const res = await fetch('/api/providers/models', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ baseUrl, apiKey, type }),
-    });
-    const json = await res.json();
-
-    if (!json.success || !json.data?.length) {
-      throw new Error(json.error || '未返回模型列表');
-    }
-
-    // Populate datalist
-    const datalist = document.getElementById(`models-${index}`);
-    if (datalist) {
-      datalist.innerHTML = '';
-      json.data.forEach(id => {
-        const opt = document.createElement('option');
-        opt.value = id;
-        datalist.appendChild(opt);
-      });
-    }
-
-    // Also update models list
-    const providerId = card.querySelector('h3')?.textContent?.trim() || `provider_${index}`;
-    const newModels = json.data.map(id => ({ id, purpose: 'llm' }));
-
-    // Add to models list editor
-    const modelsList = document.getElementById(`models-list-${index}`);
-    if (modelsList) {
-      modelsList.innerHTML = newModels.map((m, mi) => `
-        <div class="list-row">
-          <input type="text" value="${esc(m.id)}" placeholder="模型 ID" data-model-index="${mi}">
-          <select style="width:100px" data-model-purpose="${mi}">
-            <option value="llm" selected>LLM</option>
-            <option value="embedding">Embedding</option>
-            <option value="both">Both</option>
-          </select>
-          <input type="number" style="width:80px" value="" placeholder="维度" data-model-dimension="${mi}">
-          <button class="btn-remove" onclick="removeModel(${index}, ${mi})">×</button>
-        </div>
-      `).join('');
-    }
-
-    if (statusEl) statusEl.textContent = `✓ 找到 ${json.data.length} 个模型`;
-    toast(`获取到 ${json.data.length} 个模型`, 'success');
-  } catch (e) {
-    if (statusEl) statusEl.textContent = '✗ ' + e.message;
-    toast('获取模型失败: ' + e.message, 'error');
-  } finally {
-    if (btnEl) btnEl.disabled = false;
-  }
-}
-
-function onTypeChange(index, type) {
-  const card = document.querySelector(`.provider-card[data-index="${index}"]`);
-  if (!card) return;
-
-  const hintEl = document.getElementById(`apiKey-hint-${index}`);
-  if (hintEl) {
-    hintEl.textContent = type === 'ollama' ? 'Ollama 通常不需要 API Key' : 'OpenAI 兼容接口需要 API Key';
-  }
-
-  // Update preset options if needed
-  toast(`已切换为 ${type === 'ollama' ? 'Ollama' : 'OpenAI 兼容'} 类型`, 'success');
-}
-
-// ── Provider CRUD ──
-function applyPreset(index, presetName) {
-  const preset = LLM_PRESETS[presetName];
-  if (!preset) return;
-
-  const card = document.querySelector(`.provider-card[data-index="${index}"]`);
-  if (!card) return;
-
-  // Update type
-  const typeSelect = card.querySelector('[data-field="type"]');
-  if (typeSelect) {
-    typeSelect.value = preset.type;
-    onTypeChange(index, preset.type);
-  }
-
-  // Update baseUrl
-  const baseUrlInput = card.querySelector('[data-field="baseUrl"]');
-  if (baseUrlInput) baseUrlInput.value = preset.baseUrl;
-
-  // Update models datalist
-  const datalist = document.getElementById(`models-${index}`);
-  if (datalist) {
-    datalist.innerHTML = '';
-    preset.models.forEach(m => {
-      const opt = document.createElement('option');
-      opt.value = m;
-      datalist.appendChild(opt);
-    });
-  }
-
-  toast(`已应用 ${presetName} 预设`, 'success');
-}
-
-function addProvider() {
-  const name = prompt('供应商名称（英文，如 deepseek、ollama）');
-  if (!name || !name.trim()) return;
-  const id = name.trim().toLowerCase().replace(/\s+/g, '_');
-
-  if (!config.providers) {
-    config.providers = { list: [], defaults: {} };
-  }
-  if (!config.providers.list) {
-    config.providers.list = [];
-  }
-
-  if (config.providers.list.some(p => p.id === id)) {
-    toast('供应商 "' + id + '" 已存在', 'error');
-    return;
-  }
-
-  config.providers.list.push({
-    id,
-    type: 'openai',
-    baseUrl: '',
-    apiKey: '',
-    models: [],
-  });
-
-  renderProviders();
-  toast(`已添加供应商 "${id}"`, 'success');
-}
-
-function deleteProvider(index) {
-  if (!config.providers?.list) return;
-  if (config.providers.list.length <= 1) {
-    toast('至少保留一个供应商', 'error');
-    return;
-  }
-
-  const provider = config.providers.list[index];
-  if (!confirm(`确认删除供应商 "${provider.id}"？`)) return;
-
-  config.providers.list.splice(index, 1);
-
-  // Update defaults if needed
-  if (config.providers.defaults.llm?.providerId === provider.id) {
-    config.providers.defaults.llm = undefined;
-  }
-  if (config.providers.defaults.embedding?.providerId === provider.id) {
-    config.providers.defaults.embedding = undefined;
-  }
-
-  renderProviders();
-  toast(`已删除供应商 "${provider.id}"`, 'success');
-}
-
-function renameProvider(index) {
-  if (!config.providers?.list?.[index]) return;
-
-  const oldId = config.providers.list[index].id;
-  const newId = prompt('新名称', oldId);
-  if (!newId || !newId.trim() || newId.trim() === oldId) return;
-  const id = newId.trim().toLowerCase().replace(/\s+/g, '_');
-
-  if (config.providers.list.some(p => p.id === id && p !== config.providers.list[index])) {
-    toast('名称 "' + id + '" 已存在', 'error');
-    return;
-  }
-
-  const oldId2 = config.providers.list[index].id;
-  config.providers.list[index].id = id;
-
-  // Update defaults if needed
-  if (config.providers.defaults.llm?.providerId === oldId2) {
-    config.providers.defaults.llm.providerId = id;
-  }
-  if (config.providers.defaults.embedding?.providerId === oldId2) {
-    config.providers.defaults.embedding.providerId = id;
-  }
-
-  renderProviders();
-  toast(`已重命名为 "${id}"`, 'success');
-}
-
-function addModel(providerIndex) {
-  if (!config.providers?.list?.[providerIndex]) return;
-
-  const provider = config.providers.list[providerIndex];
-  if (!provider.models) provider.models = [];
-
-  provider.models.push({ id: '', purpose: 'llm' });
-  renderProviders();
-}
-
-function removeModel(providerIndex, modelIndex) {
-  if (!config.providers?.list?.[providerIndex]?.models) return;
-
-  config.providers.list[providerIndex].models.splice(modelIndex, 1);
-  renderProviders();
-}
-
-function collectProviders() {
-  const providers = [];
-
-  document.querySelectorAll('.provider-card').forEach(card => {
-    const index = parseInt(card.dataset.index);
-    const id = card.querySelector('h3')?.textContent?.trim() || `provider_${index}`;
-
-    const type = card.querySelector('[data-field="type"]')?.value || 'openai';
-    const baseUrl = card.querySelector('[data-field="baseUrl"]')?.value || '';
-    const apiKey = card.querySelector('[data-field="apiKey"]')?.value || '';
-    const defaultModel = card.querySelector('[data-field="defaultModel"]')?.value || '';
-
-    // Collect models
-    const models = [];
-    const modelsList = card.querySelector(`#models-list-${index}`);
-    if (modelsList) {
-      modelsList.querySelectorAll('.list-row').forEach((row, mi) => {
-        const modelId = row.querySelector(`[data-model-index="${mi}"]`)?.value?.trim();
-        if (modelId) {
-          const purpose = row.querySelector(`[data-model-purpose="${mi}"]`)?.value || 'llm';
-          const dimension = parseInt(row.querySelector(`[data-model-dimension="${mi}"]`)?.value) || undefined;
-          models.push({ id: modelId, purpose, dimension });
-        }
-      });
-    }
-
-    providers.push({
-      id,
-      type,
-      baseUrl,
-      apiKey,
-      defaultModel: defaultModel || undefined,
-      models: models.length > 0 ? models : undefined,
-    });
-  });
-
-  return providers;
-}
-
-// ── List editor ──
-function renderList(containerId, items) {
-  const container = document.getElementById(containerId);
-  container.innerHTML = '';
-  items.forEach((item, i) => {
-    container.appendChild(createListRow(containerId, i, item));
-  });
-}
-
-function createListRow(containerId, index, value) {
-  const row = document.createElement('div');
-  row.className = 'list-row';
-  row.innerHTML = `
-    <input type="text" value="${esc(value)}">
-    <button class="btn-remove" onclick="removeListItem('${containerId}', ${index})">×</button>
-  `;
-  return row;
-}
-
-function addListItem(containerId, value) {
-  const container = document.getElementById(containerId);
-  const index = container.children.length;
-  container.appendChild(createListRow(containerId, index, value));
-}
-
-function removeListItem(containerId, index) {
-  const container = document.getElementById(containerId);
-  container.children[index]?.remove();
-  Array.from(container.children).forEach((row, i) => {
-    const input = row.querySelector('input');
-    const btn = row.querySelector('.btn-remove');
-    if (btn) btn.setAttribute('onclick', `removeListItem('${containerId}', ${i})`);
-  });
-}
-
-function getListValues(containerId) {
-  const container = document.getElementById(containerId);
-  return Array.from(container.querySelectorAll('input')).map(el => el.value).filter(v => v.trim());
-}
-
-// ── Rules editor ──
-function renderRules(rules) {
-  const container = document.getElementById('rules.list');
-  container.innerHTML = '';
-  rules.forEach((rule, i) => {
-    container.appendChild(createRuleRow(i, rule.pattern, rule.reply));
-  });
-}
-
-function createRuleRow(index, pattern, reply) {
-  const row = document.createElement('div');
-  row.className = 'rule-row';
-  row.innerHTML = `
-    <input type="text" placeholder="正则表达式" value="${esc(pattern ?? '')}">
-    <input type="text" placeholder="回复内容" value="${esc(reply ?? '')}">
-    <button class="btn-remove" onclick="removeRule(${index})">×</button>
-  `;
-  return row;
-}
-
-function addRule() {
-  const container = document.getElementById('rules.list');
-  const index = container.children.length;
-  container.appendChild(createRuleRow(index, '', ''));
-}
-
-function removeRule(index) {
-  const container = document.getElementById('rules.list');
-  container.children[index]?.remove();
-  Array.from(container.children).forEach((row, i) => {
-    const btn = row.querySelector('.btn-remove');
-    if (btn) btn.setAttribute('onclick', `removeRule(${i})`);
-  });
-}
-
-function getRules() {
-  const container = document.getElementById('rules.list');
-  const rules = [];
-  container.querySelectorAll('.rule-row').forEach(row => {
-    const inputs = row.querySelectorAll('input');
-    const pattern = inputs[0]?.value?.trim();
-    const reply = inputs[1]?.value?.trim();
-    if (pattern && reply) rules.push({ pattern, reply });
-  });
-  return rules;
-}
-
-// ── Save config ──
-async function saveConfig() {
-  const newConfig = {
-    server: {
-      host: document.getElementById('server.host').value || '0.0.0.0',
-      port: parseInt(document.getElementById('server.port').value) || 8080,
-    },
-    onebot: {
-      url: document.getElementById('onebot.url').value || 'http://127.0.0.1:3000',
-      accessToken: document.getElementById('onebot.accessToken').value || undefined,
-    },
-    providers: {
-      list: collectProviders(),
-      defaults: {
-        llm: {
-          providerId: document.getElementById('providers.defaults.llm.providerId')?.value || undefined,
-          modelId: document.getElementById('providers.defaults.llm.modelId')?.value || undefined,
-        },
-        embedding: {
-          providerId: document.getElementById('providers.defaults.embedding.providerId')?.value || undefined,
-          modelId: document.getElementById('providers.defaults.embedding.modelId')?.value || undefined,
-          dimension: parseInt(document.getElementById('providers.defaults.embedding.dimension')?.value) || undefined,
-        },
-      },
-    },
-    storage: {
-      type: document.getElementById('storage.type').value || 'sqlite',
-      path: document.getElementById('storage.path').value || 'data/bot.db',
-    },
-    plugins: {
-      enabled: getListValues('plugins.enabled'),
-      disabled: getListValues('plugins.disabled'),
-    },
-    admin: {
-      userIds: getListValues('admin.userIds'),
-      commands: getListValues('admin.commands'),
-    },
-    context: {
-      historyLimit: parseInt(document.getElementById('context.historyLimit').value) || 10,
-    },
-    rules: getRules(),
-    memory: collectMemory(),
-    tools: {
-      search: collectSearch(),
-    },
-  };
-
-  const newPersona = collectPersona();
-
-  try {
-    const [configRes, personaRes] = await Promise.all([
-      fetch('/api/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newConfig),
-      }),
-      fetch('/api/persona', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newPersona),
-      }),
-    ]);
-
-    const configJson = await configRes.json();
-    if (!configJson.success) throw new Error(configJson.error);
-
-    const personaJson = await personaRes.json();
-    if (!personaJson.success) throw new Error(personaJson.error);
-
-    toast('配置已保存', 'success');
-    config = newConfig;
-    persona = newPersona;
-  } catch (e) {
-    toast('保存失败: ' + e.message, 'error');
-  }
-}
-
-// ── Toast ──
-function toast(msg, type) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'toast ' + type + ' show';
-  setTimeout(() => el.classList.remove('show'), 3000);
-}
-
-function esc(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-// ── Memory Data ──
-async function loadMemUsers() {
-  try {
-    const res = await fetch('/api/memory/users');
-    const json = await res.json();
-    if (!json.success) throw new Error(json.error);
-
-    const select = document.getElementById('memdata.userId');
-    const current = select.value;
-    select.innerHTML = '<option value="">-- 请选择用户 --</option>';
-    json.data.forEach(u => {
-      const opt = document.createElement('option');
-      opt.value = u.userId;
-      opt.textContent = `${u.userId} (${u.lastSeenAtStr})`;
-      select.appendChild(opt);
-    });
-    if (current) select.value = current;
-  } catch (e) {
-    toast('加载用户列表失败: ' + e.message, 'error');
-  }
-}
-
-document.getElementById('memdata.userId').addEventListener('change', async function() {
-  const userId = this.value;
-  const statsEl = document.getElementById('memdata.stats');
-  const actionsEl = document.getElementById('memdata.actions');
-  const listEl = document.getElementById('memdata.list');
-
-  if (!userId) {
-    statsEl.style.display = 'none';
-    actionsEl.style.display = 'none';
-    listEl.innerHTML = '';
-    return;
-  }
-
-  await loadMemStats(userId);
-  statsEl.style.display = 'block';
-  actionsEl.style.display = 'flex';
-  await loadMemData();
-});
-
-async function loadMemStats(userId) {
-  try {
-    const res = await fetch(`/api/memory/stats?userId=${encodeURIComponent(userId)}`);
-    const json = await res.json();
-    if (!json.success) throw new Error(json.error);
-
-    document.getElementById('memdata.statTotal').textContent = json.data.total;
-
-    const typesEl = document.getElementById('memdata.statTypes');
-    typesEl.innerHTML = '';
-    const labels = { summary: '摘要', preference: '偏好', event: '事件', context: '上下文' };
-    Object.entries(json.data.byType).forEach(([type, count]) => {
-      const div = document.createElement('div');
-      div.style.cssText = 'background:var(--input-bg);border:1px solid var(--input-border);border-radius:8px;padding:12px 20px;min-width:100px;text-align:center';
-      div.innerHTML = `
-        <div style="font-size:20px;font-weight:600;color:var(--text)">${count}</div>
-        <div style="font-size:12px;color:var(--text-dim);margin-top:4px">${labels[type] ?? type}</div>
-      `;
-      typesEl.appendChild(div);
-    });
-  } catch (e) {
-    toast('加载统计失败: ' + e.message, 'error');
-  }
-}
-
-async function loadMemData() {
-  const userId = document.getElementById('memdata.userId').value;
-  const type = document.getElementById('memdata.filter').value;
-  if (!userId) return;
-
-  const listEl = document.getElementById('memdata.list');
-  listEl.innerHTML = '<div class="mem-empty">加载中...</div>';
-
-  try {
-    let url = `/api/memory/all?userId=${encodeURIComponent(userId)}`;
-    if (type) url += `&type=${encodeURIComponent(type)}`;
-
-    const res = await fetch(url);
-    const json = await res.json();
-    if (!json.success) throw new Error(json.error);
-
-    if (json.data.length === 0) {
-      listEl.innerHTML = '<div class="mem-empty">暂无数据</div>';
-      return;
-    }
-
-    listEl.innerHTML = '';
-    json.data.forEach(mem => {
-      const card = document.createElement('div');
-      card.className = 'mem-card';
-      card.innerHTML = `
-        <div class="mem-card-header">
-          <div class="mem-card-meta">
-            <span class="type-badge ${mem.type}">${mem.type}</span>
-            <span>创建: ${mem.createdAtStr}</span>
-            <span>重要度: ${mem.importance}</span>
-            <span>访问: ${mem.accessCount}次</span>
-            ${mem.keywords.length ? `<span>关键词: ${mem.keywords.join(', ')}</span>` : ''}
-          </div>
-          <button class="btn btn-sm btn-danger" onclick="deleteMem('${mem.id}', this)">删除</button>
-        </div>
-        <div class="mem-card-text collapsed" onclick="this.classList.toggle('collapsed')">${esc(mem.text)}</div>
-      `;
-      listEl.appendChild(card);
-    });
-  } catch (e) {
-    listEl.innerHTML = `<div class="mem-empty">加载失败: ${esc(e.message)}</div>`;
-  }
-}
-
-async function deleteMem(id, btn) {
-  if (!confirm('确认删除这条记忆？')) return;
-
-  try {
-    const res = await fetch(`/api/memory/${id}`, { method: 'DELETE' });
-    const json = await res.json();
-    if (!json.success) throw new Error(json.error);
-
-    const card = btn.closest('.mem-card');
-    card.style.opacity = '0';
-    setTimeout(() => card.remove(), 200);
-    toast('已删除', 'success');
-
-    // Refresh stats
-    const userId = document.getElementById('memdata.userId').value;
-    if (userId) loadMemStats(userId);
-  } catch (e) {
-    toast('删除失败: ' + e.message, 'error');
-  }
-}
-
-async function exportUserData() {
-  const userId = document.getElementById('memdata.userId').value;
-  if (!userId) return;
-
-  try {
-    const res = await fetch(`/api/memory/export?userId=${encodeURIComponent(userId)}`);
-    if (!res.ok) {
-      const json = await res.json();
-      throw new Error(json.error);
-    }
-
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `memory-export-${userId}-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast('导出成功', 'success');
-  } catch (e) {
-    toast('导出失败: ' + e.message, 'error');
-  }
-}
-
-async function deleteAllUserData() {
-  const userId = document.getElementById('memdata.userId').value;
-  if (!userId) return;
-
-  if (!confirm(`⚠️ 确认清空用户 ${userId} 的所有记忆数据？\n此操作不可撤销！`)) return;
-  if (!confirm('再次确认：删除后无法恢复，确定继续？')) return;
-
-  try {
-    const res = await fetch(`/api/memory/user?userId=${encodeURIComponent(userId)}`, { method: 'DELETE' });
-    const json = await res.json();
-    if (!json.success) throw new Error(json.error);
-
-    toast(`已清空：删除 ${json.data.memoriesDeleted} 条记忆，${json.data.messagesDeleted} 条消息`, 'success');
-
-    // Reload
-    loadMemStats(userId);
-    loadMemData();
-    loadMemUsers();
-  } catch (e) {
-    toast('清空失败: ' + e.message, 'error');
-  }
-}
-
-// Load users on section switch
-document.querySelector('[data-section="memdata"]').addEventListener('click', () => {
-  loadMemUsers();
-});
-
-// ── Init ──
-loadConfig();
-</script>
 </body>
 </html>
