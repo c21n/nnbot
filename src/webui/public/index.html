@@ -153,12 +153,12 @@
           <div class="card-header">
             <div>
               <div class="card-title">默认供应商</div>
-              <div class="card-description">选择默认的 LLM 和 Embedding 供应商</div>
+              <div class="card-description">选择默认的文本、视觉、语音、嵌入供应商</div>
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">默认 LLM</label>
+              <label class="form-label">📝 默认文本 LLM</label>
               <div style="display:flex;gap:var(--space-2)">
                 <select id="providers-defaults-llm-provider" class="form-select" style="flex:1">
                   <option value="">-- 选择供应商 --</option>
@@ -170,7 +170,33 @@
               <div class="form-hint">用于 AI 对话的主要 LLM</div>
             </div>
             <div class="form-group">
-              <label class="form-label">默认 Embedding</label>
+              <label class="form-label">👁️ 默认视觉 LLM</label>
+              <div style="display:flex;gap:var(--space-2)">
+                <select id="providers-defaults-vision-provider" class="form-select" style="flex:1">
+                  <option value="">-- 选择供应商 --</option>
+                </select>
+                <select id="providers-defaults-vision-model" class="form-select" style="flex:1">
+                  <option value="">-- 选择模型 --</option>
+                </select>
+              </div>
+              <div class="form-hint">用于图片理解的视觉模型</div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">🎤 默认语音 STT</label>
+              <div style="display:flex;gap:var(--space-2)">
+                <select id="providers-defaults-stt-provider" class="form-select" style="flex:1">
+                  <option value="">-- 选择供应商 --</option>
+                </select>
+                <select id="providers-defaults-stt-model" class="form-select" style="flex:1">
+                  <option value="">-- 选择模型 --</option>
+                </select>
+              </div>
+              <div class="form-hint">用于语音转文字的 STT 模型</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">🔗 默认 Embedding</label>
               <div style="display:flex;gap:var(--space-2)">
                 <select id="providers-defaults-emb-provider" class="form-select" style="flex:1">
                   <option value="">-- 选择供应商 --</option>
@@ -191,7 +217,10 @@
 
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4)">
           <h3 style="font-size:var(--text-base);color:var(--text-secondary)">供应商列表</h3>
-          <button class="btn btn-sm btn-secondary" onclick="window._providers.add()">+ 新增供应商</button>
+          <div style="display:flex;gap:var(--space-2);align-items:center">
+            <button id="save-providers-btn" class="btn btn-sm btn-primary" onclick="window._providers.save()">保存供应商配置</button>
+            <button class="btn btn-sm btn-secondary" onclick="window._providers.add()">+ 新增供应商</button>
+          </div>
         </div>
         <div id="providers-list"></div>
       </div>

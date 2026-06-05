@@ -3,6 +3,11 @@ server:
   port: 8080
 onebot:
   url: http://127.0.0.1:3000
+storage:
+  type: sqlite
+  path: data/bot.db
+context:
+  historyLimit: 10
 llm:
   currentProvider: ds
   providers:
@@ -16,24 +21,27 @@ providers:
     - id: ds
       type: openai
       baseUrl: https://api.deepseek.com/v1
-      apiKey: ${LLM_DS_API_KEY}
+      apiKey: ${PROVIDER_DS_API_KEY}
       defaultModel: deepseek-v4-pro
+      models:
+        - id: deepseek-v4-flash
+          purpose: both
+        - id: deepseek-v4-pro
+          purpose: llm
     - id: siliconflow
       type: openai
       baseUrl: https://api.siliconflow.cn/v1
-      apiKey: ${SILICONFLOW_API_KEY}
+      apiKey: ${PROVIDER_SILICONFLOW_API_KEY}
       defaultModel: BAAI/bge-large-zh-v1.5
   defaults:
     llm:
       providerId: ds
       modelId: deepseek-v4-pro
+    vision: {}
+    stt: {}
     embedding:
       providerId: siliconflow
-      modelId: BAAI/bge-large-zh-v1.5
       dimension: 1024
-storage:
-  type: sqlite
-  path: data/bot.db
 plugins:
   enabled:
     - ai_chat
@@ -53,11 +61,14 @@ admin:
     - /persona
     - /persona-set
     - /persona-reset
-context:
-  historyLimit: 10
 rules: []
 memory:
   enabled: true
+  embedding:
+    providerId: siliconflow
+  llm:
+    providerId: ds
+    model: deepseek-v4-flash
   sqlite:
     path: ./data/memory.db
   search:
@@ -69,5 +80,5 @@ memory:
 tools:
   search:
     enabled: true
-    provider: you
+    provider: duckduckgo
     fallback: duckduckgo

@@ -176,9 +176,16 @@ async function saveConfig() {
     const search = collectSearch();
     const personaData = collectPersona();
 
+    // Only update providers if there are provider cards on the page
+    const hasProviderCards = document.querySelectorAll('.provider-card').length > 0;
+    const providersConfig = hasProviderCards
+      ? { list: providers, defaults }
+      : config.providers; // Preserve existing providers if no cards
+
     const newConfig = {
       ...settings,
-      providers: { list: providers, defaults },
+      llm: config.llm, // Preserve existing LLM config
+      providers: providersConfig,
       plugins,
       admin,
       rules,

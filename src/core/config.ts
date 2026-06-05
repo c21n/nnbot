@@ -97,6 +97,7 @@ export class ConfigManager {
       tools: overrides.tools,
       providers: overrides.providers ?? defaults.providers,
       memory: overrides.memory ?? defaults.memory,
+      multimodal: overrides.multimodal ?? defaults.multimodal,
     };
   }
 

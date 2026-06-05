@@ -6,6 +6,7 @@
  */
 
 import { logger } from "./logger.js";
+import type { IMultimodalMessage, IMultimodalContent } from "../multimodal/types/multimodal.types.js";
 
 interface BufferedMessage {
   userId: string;
@@ -13,6 +14,7 @@ interface BufferedMessage {
   groupId: string | null;
   groupName: string | null;
   messages: string[];
+  multimodalContents: IMultimodalContent[];
   timer: ReturnType<typeof setTimeout>;
 }
 
@@ -24,7 +26,8 @@ export class MessageBuffer {
     nickname: string,
     groupId: string | null,
     groupName: string | null,
-    combinedMessage: string
+    combinedMessage: string,
+    multimodal?: IMultimodalMessage
   ) => Promise<void>;
 
   constructor(
@@ -34,7 +37,8 @@ export class MessageBuffer {
       nickname: string,
       groupId: string | null,
       groupName: string | null,
-      combinedMessage: string
+      combinedMessage: string,
+      multimodal?: IMultimodalMessage
     ) => Promise<void>
   ) {
     this.delay = delay;
@@ -49,7 +53,8 @@ export class MessageBuffer {
     nickname: string,
     groupId: string | null,
     groupName: string | null,
-    message: string
+    message: string,
+    multimodal?: IMultimodalMessage
   ): void {
     const key = groupId ? `group:${groupId}:${userId}` : `private:${userId}`;
 
@@ -57,6 +62,9 @@ export class MessageBuffer {
     if (this.buffers.has(key)) {
       const buffer = this.buffers.get(key)!;
       buffer.messages.push(message);
+      if (multimodal?.contents) {
+        buffer.multimodalContents.push(...multimodal.contents);
+      }
       clearTimeout(buffer.timer);
       buffer.timer = setTimeout(() => this.flush(key), this.delay);
       logger.debug(`[Buffer] ${userId} 追加消息，当前 ${buffer.messages.length} 条`);
@@ -71,6 +79,7 @@ export class MessageBuffer {
       groupId,
       groupName,
       messages: [message],
+      multimodalContents: multimodal?.contents ? [...multimodal.contents] : [],
       timer,
     });
     logger.debug(`[Buffer] ${userId} 新建缓冲`);
@@ -91,6 +100,15 @@ export class MessageBuffer {
     // Combine messages
     const combinedMessage = buffer.messages.join("\n");
 
+    // Build multimodal message if there are multimodal contents
+    let multimodal: IMultimodalMessage | undefined;
+    if (buffer.multimodalContents.length > 0) {
+      multimodal = {
+        contents: buffer.multimodalContents,
+        text: combinedMessage,
+      };
+    }
+
     logger.info(
       `[Buffer] ${buffer.nickname}(${buffer.userId}) 合并 ${buffer.messages.length} 条消息`
     );
@@ -101,7 +119,8 @@ export class MessageBuffer {
       buffer.nickname,
       buffer.groupId,
       buffer.groupName,
-      combinedMessage
+      combinedMessage,
+      multimodal
     );
   }
 

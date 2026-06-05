@@ -21,7 +21,9 @@ import { OneBotAdapter } from "./utils/onebot.js";
 import { configApi } from "./webui/config-api.js";
 import { memoryApi } from "./webui/memory-api.js";
 import { toolRegistry } from "./services/tools/index.js";
+import { initMultimodalServices } from "./plugins/multimodal.js";
 import type { PluginServices, AIChatHooks } from "./interfaces.js";
+import type { IMultimodalMessage } from "./multimodal/types/multimodal.types.js";
 
 const PLUGINS_DIR = resolve(import.meta.dirname, "plugins");
 const WEBUI_DIR = resolve(import.meta.dirname, "webui", "public");
@@ -67,6 +69,10 @@ async function main() {
   const loginInfo = await onebot.getLoginInfo();
   logger.info(`Connected to OneBot as ${loginInfo.nickname} (${loginInfo.userId})`);
 
+  // Initialize multimodal services
+  initMultimodalServices(config, llm, onebot);
+  logger.info("Multimodal services initialized");
+
   // Initialize plugin manager
   const pluginManager = new PluginManager();
 
@@ -100,7 +106,7 @@ async function main() {
   // Message buffer for handling multi-part messages
   const messageBuffer = new MessageBuffer(
     config.context.messageBufferDelay ?? 3000,
-    async (userId, nickname, groupId, groupName, combinedMessage) => {
+    async (userId, nickname, groupId, groupName, combinedMessage, multimodal) => {
       // Create event and process
       const event = {
         type: groupId ? "group_message" : "private_message",
@@ -111,6 +117,7 @@ async function main() {
         message: combinedMessage,
         timestamp: Date.now(),
         raw: {},
+        multimodal,
       };
 
       const response = await pluginManager.dispatch(event as any);
@@ -163,7 +170,8 @@ async function main() {
           event.nickname,
           event.groupId,
           event.groupName,
-          event.message
+          event.message,
+          event.multimodal
         );
       }
 

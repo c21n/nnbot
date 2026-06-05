@@ -31,6 +31,8 @@ export interface Event {
   readonly message: string;
   readonly timestamp: number;
   readonly raw: Record<string, unknown>;
+  /** Multimodal content (images, voice, etc.) */
+  readonly multimodal?: import("./multimodal/types/multimodal.types.js").IMultimodalMessage;
 }
 
 /**
@@ -172,6 +174,14 @@ export interface ILLMService {
   ): Promise<LLMResponse>;
 
   /**
+   * Send messages with vision support (multimodal)
+   */
+  chatWithVision?(
+    messages: LLMMessage[],
+    options?: LLMChatOptions
+  ): Promise<string>;
+
+  /**
    * List available models
    */
   listModels(): Promise<string[]>;
@@ -182,7 +192,7 @@ export interface ILLMService {
  */
 export interface LLMMessage {
   role: "system" | "user" | "assistant" | "tool";
-  content: string;
+  content: string | import("./multimodal/types/vision.types.js").VisionContentPart[];
   /** Tool calls in this message (for assistant role) */
   toolCalls?: LLMToolCall[];
   /** Tool call ID (for tool role) */
@@ -380,6 +390,8 @@ export interface LLMProviderConfig {
   model: string;
   temperature?: number;
   maxTokens?: number;
+  /** Vision model for multimodal support */
+  visionModel?: string;
 }
 
 /**
@@ -482,6 +494,44 @@ export interface ToolsConfig {
 }
 
 /**
+ * STT service provider type
+ */
+export type STTProvider = 'whisper' | 'local' | 'xunfei';
+
+/**
+ * Multimodal configuration
+ */
+export interface MultimodalConfig {
+  enabled: boolean;
+  vision: {
+    enabled: boolean;
+  };
+  stt: {
+    enabled: boolean;
+    provider: STTProvider;
+    whisper?: {
+      apiKey: string;
+      model: string;
+      baseUrl?: string;
+    };
+    local?: {
+      modelPath: string;
+    };
+    xunfei?: {
+      appId: string;
+      apiKey: string;
+      apiSecret: string;
+    };
+  };
+  storage: {
+    storeOriginal: boolean;
+    path: string;
+    maxFileSize: string;
+    retentionDays: number;
+  };
+}
+
+/**
  * Root configuration
  */
 export interface Config {
@@ -497,6 +547,8 @@ export interface Config {
   tools?: ToolsConfig;
   /** Unified model provider configuration */
   providers?: import("./providers/types.js").ProvidersConfig;
+  /** Multimodal configuration */
+  multimodal?: MultimodalConfig;
 }
 
 /**

@@ -6,6 +6,7 @@
 
 import axios, { type AxiosInstance } from "axios";
 import type { Event, Response, OneBotConfig, EventType } from "../interfaces.js";
+import type { IMultimodalMessage, IMultimodalContent, IOneBotSegment } from "../multimodal/types/multimodal.types.js";
 
 export class OneBotAdapter {
   private client: AxiosInstance;
@@ -44,14 +45,77 @@ export class OneBotAdapter {
     // Extract message content
     // OneBot can send message as string or array of segments
     let message = "";
+    let multimodal: IMultimodalMessage | undefined;
+
     if (typeof data.message === "string") {
       message = data.message;
     } else if (Array.isArray(data.message)) {
-      // Extract text from message segments
-      message = (data.message as Array<Record<string, unknown>>)
-        .filter((seg) => seg.type === "text")
-        .map((seg) => ((seg.data as Record<string, unknown>)?.text as string) ?? "")
-        .join("");
+      const segments = data.message as Array<Record<string, unknown>>;
+      const textParts: string[] = [];
+      const multimodalContents: IMultimodalContent[] = [];
+
+      for (const seg of segments) {
+        const segType = seg.type as string;
+        const segData = seg.data as Record<string, unknown>;
+
+        if (segType === "text") {
+          // Text segment
+          const text = segData?.text as string ?? "";
+          if (text) {
+            textParts.push(text);
+          }
+        } else if (segType === "image") {
+          // Image segment
+          const imageUrl = segData?.url as string;
+          const imageFile = segData?.file as string;
+          const imageData = segData?.file_base64 as string;
+
+          // Build image content
+          const imageContent: IMultimodalContent = {
+            type: "image",
+            data: imageData || "", // Will be populated later if needed
+            mimeType: "image/jpeg", // Default, will be detected
+            metadata: {
+              url: imageUrl,
+              file: imageFile,
+              file_id: segData?.file_id,
+            },
+          };
+
+          multimodalContents.push(imageContent);
+          textParts.push("[图片]");
+        } else if (segType === "record") {
+          // Voice segment
+          const voiceFile = segData?.file as string;
+          const voiceUrl = segData?.url as string;
+          const voiceData = segData?.file_base64 as string;
+
+          // Build voice content
+          const voiceContent: IMultimodalContent = {
+            type: "voice",
+            data: voiceData || "", // Will be populated later if needed
+            mimeType: "audio/wav", // Default, will be detected
+            metadata: {
+              file: voiceFile,
+              url: voiceUrl,
+              file_id: segData?.file_id,
+            },
+          };
+
+          multimodalContents.push(voiceContent);
+          textParts.push("[语音]");
+        }
+      }
+
+      message = textParts.join("");
+
+      // Build multimodal message if there are media contents
+      if (multimodalContents.length > 0) {
+        multimodal = {
+          contents: multimodalContents,
+          text: message,
+        };
+      }
     }
 
     // Extract user info
@@ -68,6 +132,7 @@ export class OneBotAdapter {
       message: message.trim(),
       timestamp: Date.now(),
       raw: data,
+      multimodal,
     };
   }
 
@@ -142,6 +207,43 @@ export class OneBotAdapter {
       return true;
     } catch {
       return false;
+    }
+  }
+
+  /**
+   * Download media file from OneBot
+   * @param fileUrl - URL of the file to download
+   * @returns Buffer containing the file data
+   */
+  async downloadMedia(fileUrl: string): Promise<Buffer> {
+    try {
+      const response = await this.client.get(fileUrl, {
+        responseType: "arraybuffer",
+        timeout: 30000, // 30 second timeout for media downloads
+      });
+      return Buffer.from(response.data);
+    } catch (error) {
+      console.error("Failed to download media file:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get file from OneBot by file_id
+   * @param fileId - OneBot file ID
+   * @returns Buffer containing the file data
+   */
+  async getFile(fileId: string): Promise<Buffer> {
+    try {
+      const response = await this.client.get("/get_file", {
+        params: { file_id: fileId },
+        responseType: "arraybuffer",
+        timeout: 30000,
+      });
+      return Buffer.from(response.data);
+    } catch (error) {
+      console.error("Failed to get file:", error);
+      throw error;
     }
   }
 

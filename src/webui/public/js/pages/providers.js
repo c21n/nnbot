@@ -102,11 +102,13 @@ function renderProviders() {
         <div id="models-list-${index}" class="list-editor">
           ${(p.models ?? []).map((m, mi) => `
             <div class="list-row">
-              <input class="form-input" type="text" value="${esc(m.id)}" placeholder="模型 ID" data-model-index="${mi}">
-              <select class="form-select" style="width:100px" data-model-purpose="${mi}">
-                <option value="llm" ${m.purpose === 'llm' ? 'selected' : ''}>LLM</option>
-                <option value="embedding" ${m.purpose === 'embedding' ? 'selected' : ''}>Embedding</option>
-                <option value="both" ${m.purpose === 'both' ? 'selected' : ''}>Both</option>
+              <input class="form-input" type="text" value="${esc(m.id)}" placeholder="模型 ID" data-model-index="${mi}" list="models-list-datalist-${index}" autocomplete="off">
+              <select class="form-select" style="width:120px" data-model-purpose="${mi}">
+                <option value="llm" ${m.purpose === 'llm' ? 'selected' : ''}>文本 LLM</option>
+                <option value="vision" ${m.purpose === 'vision' ? 'selected' : ''}>视觉 LLM</option>
+                <option value="stt" ${m.purpose === 'stt' ? 'selected' : ''}>语音 STT</option>
+                <option value="embedding" ${m.purpose === 'embedding' ? 'selected' : ''}>嵌入</option>
+                <option value="both" ${m.purpose === 'both' ? 'selected' : ''}>文本+嵌入</option>
               </select>
               <input class="form-input" type="number" style="width:80px" value="${m.dimension ?? ''}" placeholder="维度" data-model-dimension="${mi}">
               <button class="btn-remove" onclick="window._providers.removeModel(${index}, ${mi})">×</button>
@@ -117,11 +119,27 @@ function renderProviders() {
       </div>
     </div>
   `).join('');
+
+  // Create datalist elements for model inputs
+  providers.forEach((p, index) => {
+    const modelsDatalist = document.createElement('datalist');
+    modelsDatalist.id = `models-list-datalist-${index}`;
+    (p.models ?? []).forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      modelsDatalist.appendChild(opt);
+    });
+    document.body.appendChild(modelsDatalist);
+  });
 }
 
 function updateDefaultDropdowns(providers, defaults) {
   const llmProviderSelect = document.getElementById('providers-defaults-llm-provider');
   const llmModelSelect = document.getElementById('providers-defaults-llm-model');
+  const visionProviderSelect = document.getElementById('providers-defaults-vision-provider');
+  const visionModelSelect = document.getElementById('providers-defaults-vision-model');
+  const sttProviderSelect = document.getElementById('providers-defaults-stt-provider');
+  const sttModelSelect = document.getElementById('providers-defaults-stt-model');
   const embProviderSelect = document.getElementById('providers-defaults-emb-provider');
   const embModelSelect = document.getElementById('providers-defaults-emb-model');
 
@@ -129,22 +147,32 @@ function updateDefaultDropdowns(providers, defaults) {
 
   // Save current values
   const currentLlmProvider = llmProviderSelect.value;
+  const currentVisionProvider = visionProviderSelect?.value;
+  const currentSttProvider = sttProviderSelect?.value;
   const currentEmbProvider = embProviderSelect.value;
 
   // Rebuild provider dropdowns
   llmProviderSelect.innerHTML = '<option value="">-- 选择供应商 --</option>';
+  if (visionProviderSelect) visionProviderSelect.innerHTML = '<option value="">-- 选择供应商 --</option>';
+  if (sttProviderSelect) sttProviderSelect.innerHTML = '<option value="">-- 选择供应商 --</option>';
   embProviderSelect.innerHTML = '<option value="">-- 选择供应商 --</option>';
 
   providers.forEach(p => {
     llmProviderSelect.innerHTML += `<option value="${esc(p.id)}">${esc(p.id)} (${p.type})</option>`;
+    if (visionProviderSelect) visionProviderSelect.innerHTML += `<option value="${esc(p.id)}">${esc(p.id)} (${p.type})</option>`;
+    if (sttProviderSelect) sttProviderSelect.innerHTML += `<option value="${esc(p.id)}">${esc(p.id)} (${p.type})</option>`;
     embProviderSelect.innerHTML += `<option value="${esc(p.id)}">${esc(p.id)} (${p.type})</option>`;
   });
 
   llmProviderSelect.value = defaults.llm?.providerId || currentLlmProvider;
+  if (visionProviderSelect) visionProviderSelect.value = defaults.vision?.providerId || currentVisionProvider || '';
+  if (sttProviderSelect) sttProviderSelect.value = defaults.stt?.providerId || currentSttProvider || '';
   embProviderSelect.value = defaults.embedding?.providerId || currentEmbProvider;
 
   // Update model dropdowns
   updateModelDropdown('llm', llmProviderSelect.value, providers, defaults.llm?.modelId);
+  if (visionProviderSelect) updateModelDropdown('vision', visionProviderSelect.value, providers, defaults.vision?.modelId);
+  if (sttProviderSelect) updateModelDropdown('stt', sttProviderSelect.value, providers, defaults.stt?.modelId);
   updateModelDropdown('embedding', embProviderSelect.value, providers, defaults.embedding?.modelId);
 
   // Set dimension
@@ -153,11 +181,13 @@ function updateDefaultDropdowns(providers, defaults) {
 
   // Add change handlers
   llmProviderSelect.onchange = () => updateModelDropdown('llm', llmProviderSelect.value, providers, '');
+  if (visionProviderSelect) visionProviderSelect.onchange = () => updateModelDropdown('vision', visionProviderSelect.value, providers, '');
+  if (sttProviderSelect) sttProviderSelect.onchange = () => updateModelDropdown('stt', sttProviderSelect.value, providers, '');
   embProviderSelect.onchange = () => updateModelDropdown('embedding', embProviderSelect.value, providers, '');
 }
 
 function updateModelDropdown(purpose, providerId, providers, selectedModel) {
-  const selectId = purpose === 'llm' ? 'providers-defaults-llm-model' : 'providers-defaults-emb-model';
+  const selectId = `providers-defaults-${purpose}-model`;
   const select = document.getElementById(selectId);
   if (!select) return;
 
@@ -167,6 +197,10 @@ function updateModelDropdown(purpose, providerId, providers, selectedModel) {
   if (provider?.models) {
     provider.models.forEach(m => {
       if (purpose === 'llm' && (m.purpose === 'llm' || m.purpose === 'both')) {
+        select.innerHTML += `<option value="${esc(m.id)}">${esc(m.id)}</option>`;
+      } else if (purpose === 'vision' && (m.purpose === 'vision' || m.purpose === 'llm')) {
+        select.innerHTML += `<option value="${esc(m.id)}">${esc(m.id)}</option>`;
+      } else if (purpose === 'stt' && m.purpose === 'stt') {
         select.innerHTML += `<option value="${esc(m.id)}">${esc(m.id)}</option>`;
       } else if (purpose === 'embedding' && (m.purpose === 'embedding' || m.purpose === 'both')) {
         select.innerHTML += `<option value="${esc(m.id)}">${esc(m.id)}${m.dimension ? ` (${m.dimension}d)` : ''}</option>`;
@@ -304,7 +338,7 @@ async function fetchModels(index) {
   try {
     const models = await API.fetchModels(baseUrl, apiKey, type);
 
-    // Populate datalist
+    // Update datalist for default model input
     const datalist = document.getElementById(`models-${index}`);
     if (datalist) {
       datalist.innerHTML = '';
@@ -315,21 +349,28 @@ async function fetchModels(index) {
       });
     }
 
-    // Update models list editor
+    // Add datalist to each model ID input in the list
     const modelsList = document.getElementById(`models-list-${index}`);
     if (modelsList) {
-      modelsList.innerHTML = models.map((id, mi) => `
-        <div class="list-row">
-          <input class="form-input" type="text" value="${esc(id)}" placeholder="模型 ID" data-model-index="${mi}">
-          <select class="form-select" style="width:100px" data-model-purpose="${mi}">
-            <option value="llm" selected>LLM</option>
-            <option value="embedding">Embedding</option>
-            <option value="both">Both</option>
-          </select>
-          <input class="form-input" type="number" style="width:80px" value="" placeholder="维度" data-model-dimension="${mi}">
-          <button class="btn-remove" onclick="window._providers.removeModel(${index}, ${mi})">×</button>
-        </div>
-      `).join('');
+      // Create or update datalist for model inputs
+      let modelsDatalist = document.getElementById(`models-list-datalist-${index}`);
+      if (!modelsDatalist) {
+        modelsDatalist = document.createElement('datalist');
+        modelsDatalist.id = `models-list-datalist-${index}`;
+        document.body.appendChild(modelsDatalist);
+      }
+      modelsDatalist.innerHTML = '';
+      models.forEach(id => {
+        const opt = document.createElement('option');
+        opt.value = id;
+        modelsDatalist.appendChild(opt);
+      });
+
+      // Add datalist attribute to existing model inputs
+      modelsList.querySelectorAll('input[data-model-index]').forEach(input => {
+        input.setAttribute('list', `models-list-datalist-${index}`);
+        input.setAttribute('autocomplete', 'off');
+      });
     }
 
     if (statusEl) statusEl.textContent = `✓ 找到 ${models.length} 个模型`;
@@ -348,6 +389,49 @@ function addModel(providerIndex) {
   if (!provider.models) provider.models = [];
   provider.models.push({ id: '', purpose: 'llm' });
   renderProviders();
+
+  // Add datalist to new model input
+  setTimeout(() => {
+    const modelsList = document.getElementById(`models-list-${providerIndex}`);
+    const modelsDatalist = document.getElementById(`models-list-datalist-${providerIndex}`);
+    if (modelsList && modelsDatalist) {
+      const lastInput = modelsList.querySelector('.list-row:last-child input[data-model-index]');
+      if (lastInput) {
+        lastInput.setAttribute('list', `models-list-datalist-${providerIndex}`);
+        lastInput.setAttribute('autocomplete', 'off');
+      }
+    }
+  }, 0);
+}
+
+// Save providers configuration
+async function saveProviders() {
+  const btn = document.getElementById('save-providers-btn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '保存中...';
+  }
+
+  try {
+    // Collect providers data
+    const providers = collectProviders();
+    const defaults = collectDefaults();
+
+    // Update config
+    config.providers = { list: providers, defaults };
+
+    // Save to server
+    await API.saveConfig(config);
+
+    toast.success('供应商配置已保存');
+  } catch (e) {
+    toast.error('保存失败: ' + e.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '保存供应商配置';
+    }
+  }
 }
 
 function removeModel(providerIndex, modelIndex) {
@@ -399,6 +483,14 @@ export function collectDefaults() {
       providerId: document.getElementById('providers-defaults-llm-provider')?.value || undefined,
       modelId: document.getElementById('providers-defaults-llm-model')?.value || undefined,
     },
+    vision: {
+      providerId: document.getElementById('providers-defaults-vision-provider')?.value || undefined,
+      modelId: document.getElementById('providers-defaults-vision-model')?.value || undefined,
+    },
+    stt: {
+      providerId: document.getElementById('providers-defaults-stt-provider')?.value || undefined,
+      modelId: document.getElementById('providers-defaults-stt-model')?.value || undefined,
+    },
     embedding: {
       providerId: document.getElementById('providers-defaults-emb-provider')?.value || undefined,
       modelId: document.getElementById('providers-defaults-emb-model')?.value || undefined,
@@ -417,4 +509,5 @@ window._providers = {
   fetchModels,
   addModel,
   removeModel,
+  save: saveProviders,
 };
