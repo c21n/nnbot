@@ -343,27 +343,28 @@ export default {
 4. 上传插件文件
 5. 点击「发布」
 
-### 第四步：通过 API 发布
+### 第四步：发布到 GitHub Registry
 
-```bash
-# 创建插件
-curl -X POST http://localhost:3001/api/plugins \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "my-plugin",
-    "displayName": "我的插件",
-    "description": "一个很棒的插件",
-    "category": "tools"
-  }'
+v2 使用 JSON 注册表 + GitHub 存储，无需独立服务器。
 
-# 发布版本
-curl -X POST http://localhost:3001/api/plugins/myuser/my-plugin/versions \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -F "version=1.0.0" \
-  -F "file=@my-plugin.js" \
-  -F "changelog=首次发布"
-```
+1. Fork [NNBot-Plugins](https://github.com/NNBotDev/NNBot-Plugins) 仓库
+2. 在 `registry.json` 中添加你的插件条目：
+   ```json
+   {
+     "my-plugin": {
+       "name": "my-plugin",
+       "display_name": "我的插件",
+       "description": "一个很棒的插件",
+       "version": "1.0.0",
+       "author": "your-username",
+       "repo": "https://github.com/your-username/my-plugin",
+       "category": "tools",
+       "download_url": "https://github.com/your-username/my-plugin/releases/download/v1.0.0/my-plugin.js"
+     }
+   }
+   ```
+3. 提交 PR 到主仓库
+4. 合并后自动生效
 
 ## 安全考虑
 

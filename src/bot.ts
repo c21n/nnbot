@@ -20,6 +20,7 @@ import { OpenAICompatibleService } from "./services/llm/openai.js";
 import { OneBotAdapter } from "./utils/onebot.js";
 import { configApi } from "./webui/config-api.js";
 import { memoryApi } from "./webui/memory-api.js";
+import { marketplaceApi } from "./marketplace/plugin.js";
 import { toolRegistry } from "./services/tools/index.js";
 import { initMultimodalServices } from "./plugins/multimodal.js";
 import type { PluginServices, AIChatHooks } from "./interfaces.js";
@@ -135,6 +136,7 @@ async function main() {
   await app.register(fastifyStatic, { root: WEBUI_DIR, prefix: "/" });
   await app.register(configApi);
   await app.register(memoryApi);
+  await app.register(marketplaceApi);
 
   // Health check endpoint
   app.get("/health", async () => {

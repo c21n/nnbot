@@ -2,14 +2,22 @@
  * Marketplace JavaScript
  *
  * Handles marketplace page interactions.
+ * Uses /api/marketplace/* endpoints served by the NNBot backend.
  */
 
 (function() {
   'use strict';
 
-  // Marketplace API configuration
-  const MARKETPLACE_API = window.MARKETPLACE_API_URL || 'http://localhost:3001';
-  console.log('[Marketplace] API URL:', MARKETPLACE_API);
+  // XSS protection — escape HTML entities before inserting into innerHTML
+  function esc(str) {
+    if (str == null) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
 
   // State
   let currentCategory = '';
@@ -26,10 +34,9 @@
   const installedModal = document.getElementById('marketplace-installed-modal');
   const publishModal = document.getElementById('marketplace-publish-modal');
 
-  // API Client
+  // API Client — uses relative paths (same origin as WebUI)
   const api = {
     async request(url, options = {}) {
-      console.log('[Marketplace] Requesting:', url);
       try {
         const response = await fetch(url, {
           ...options,
@@ -38,9 +45,7 @@
             ...options.headers,
           },
         });
-        console.log('[Marketplace] Response status:', response.status);
         const data = await response.json();
-        console.log('[Marketplace] Response data:', data);
         if (!response.ok) {
           throw new Error(data.error || `HTTP ${response.status}`);
         }
@@ -51,29 +56,19 @@
       }
     },
 
-    async searchPlugins(query, filters = {}) {
-      const params = new URLSearchParams();
-      if (query) params.set('q', query);
-      if (filters.category) params.set('category', filters.category);
-      if (filters.sortBy) params.set('sortBy', filters.sortBy);
-      if (filters.limit) params.set('limit', filters.limit.toString());
-      const response = await this.request(`${MARKETPLACE_API}/api/search?${params.toString()}`);
-      return response.data || [];
-    },
-
-    async getPopularPlugins(limit = 8) {
-      const response = await this.request(`${MARKETPLACE_API}/api/plugins/popular?limit=${limit}`);
-      return response.data || [];
-    },
-
-    async getRecommendedPlugins(limit = 8) {
-      const response = await this.request(`${MARKETPLACE_API}/api/plugins/recommended?limit=${limit}`);
+    async getPlugins(params = {}) {
+      const searchParams = new URLSearchParams();
+      if (params.q) searchParams.set('q', params.q);
+      if (params.sort) searchParams.set('sort', params.sort);
+      if (params.limit) searchParams.set('limit', params.limit.toString());
+      const qs = searchParams.toString();
+      const response = await this.request(`/api/marketplace/plugins${qs ? '?' + qs : ''}`);
       return response.data || [];
     },
 
     async getPluginDetail(pluginId) {
       try {
-        const response = await this.request(`${MARKETPLACE_API}/api/plugins/${encodeURIComponent(pluginId)}`);
+        const response = await this.request(`/api/marketplace/plugins/${encodeURIComponent(pluginId)}`);
         return response.data || null;
       } catch (err) {
         if (err.message.includes('404')) return null;
@@ -81,41 +76,58 @@
       }
     },
 
-    async getVersions(pluginId) {
-      const response = await this.request(`${MARKETPLACE_API}/api/plugins/${encodeURIComponent(pluginId)}/versions`);
-      return response.data || [];
-    },
-
     async getInstalledPlugins() {
-      // This would call NNBot's internal API
-      // For now, return empty array
-      return [];
+      try {
+        const response = await this.request('/api/marketplace/installed');
+        return response.data || [];
+      } catch {
+        return [];
+      }
     },
 
-    async installPlugin(pluginId, version) {
-      // This would call NNBot's internal API
-      return { success: true, message: `Plugin ${pluginId} installed` };
+    async installPlugin(pluginId) {
+      const response = await this.request('/api/marketplace/install', {
+        method: 'POST',
+        body: JSON.stringify({ plugin_id: pluginId }),
+      });
+      return response;
     },
 
     async uninstallPlugin(pluginId) {
-      // This would call NNBot's internal API
-      return { success: true, message: `Plugin ${pluginId} uninstalled` };
+      const response = await this.request('/api/marketplace/uninstall', {
+        method: 'POST',
+        body: JSON.stringify({ plugin_id: pluginId }),
+      });
+      return response;
     },
 
     async updatePlugin(pluginId) {
-      // This would call NNBot's internal API
-      return { success: true, message: `Plugin ${pluginId} updated` };
+      const response = await this.request('/api/marketplace/update', {
+        method: 'POST',
+        body: JSON.stringify({ plugin_id: pluginId }),
+      });
+      return response;
+    },
+
+    async togglePlugin(pluginId, enabled) {
+      const response = await this.request('/api/marketplace/toggle', {
+        method: 'POST',
+        body: JSON.stringify({ plugin_id: pluginId, enabled }),
+      });
+      return response;
     },
   };
 
   // Helper functions
   function formatNumber(num) {
+    if (num == null) return '0';
     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
     if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
     return num.toString();
   }
 
   function formatDate(dateStr) {
+    if (!dateStr) return '未知';
     const date = new Date(dateStr);
     return date.toLocaleDateString('zh-CN', {
       year: 'numeric',
@@ -125,21 +137,25 @@
   }
 
   function createPluginCard(plugin) {
+    const icon = esc(plugin.logo || '📦');
+    const displayName = esc(plugin.display_name || plugin.name);
+    const stars = plugin.stars ?? 0;
+    const id = esc(plugin.id);
     return `
-      <div class="marketplace-plugin-card" onclick="window._marketplace.showDetail('${plugin.id}')">
+      <div class="marketplace-plugin-card" data-plugin-id="${id}" onclick="window._marketplace.showDetail('${id}')">
         <div class="marketplace-plugin-header">
-          <div class="marketplace-plugin-icon">${plugin.icon || '📦'}</div>
+          <div class="marketplace-plugin-icon">${icon}</div>
           <div class="marketplace-plugin-info">
-            <div class="marketplace-plugin-name">${plugin.displayName}</div>
-            <div class="marketplace-plugin-author">by ${plugin.author}</div>
+            <div class="marketplace-plugin-name">${displayName}</div>
+            <div class="marketplace-plugin-author">by ${esc(plugin.author || '未知')}</div>
           </div>
         </div>
-        <div class="marketplace-plugin-description">${plugin.description || '暂无描述'}</div>
+        <div class="marketplace-plugin-description">${esc(plugin.description || '暂无描述')}</div>
         <div class="marketplace-plugin-meta">
-          <span>v${plugin.version}</span>
+          <span>v${esc(plugin.version || '?')}</span>
           <div class="marketplace-plugin-stats">
-            <span class="marketplace-plugin-stat">⬇️ ${formatNumber(plugin.downloads)}</span>
-            <span class="marketplace-plugin-stat">⭐ ${plugin.rating.toFixed(1)}</span>
+            <span class="marketplace-plugin-stat">⭐ ${formatNumber(stars)}</span>
+            ${plugin.category ? `<span class="marketplace-plugin-stat">${esc(plugin.category)}</span>` : ''}
           </div>
         </div>
       </div>
@@ -154,20 +170,20 @@
     container.innerHTML = plugins.map(createPluginCard).join('');
   }
 
-  // Load popular plugins
+  // Load popular plugins (sorted by stars)
   async function loadPopular() {
     try {
-      const plugins = await api.getPopularPlugins(8);
+      const plugins = await api.getPlugins({ sort: 'popular', limit: 8 });
       renderPlugins(popularContainer, plugins);
     } catch (err) {
       popularContainer.innerHTML = '<div style="text-align:center;padding:var(--space-6);color:var(--text-muted)">加载失败</div>';
     }
   }
 
-  // Load recommended plugins
+  // Load recommended plugins (pinned first, then by stars)
   async function loadRecommended() {
     try {
-      const plugins = await api.getRecommendedPlugins(8);
+      const plugins = await api.getPlugins({ sort: 'recommended', limit: 8 });
       renderPlugins(recommendedContainer, plugins);
     } catch (err) {
       recommendedContainer.innerHTML = '<div style="text-align:center;padding:var(--space-6);color:var(--text-muted)">加载失败</div>';
@@ -185,8 +201,8 @@
     resultsContainer.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
 
     try {
-      const plugins = await api.searchPlugins(query, {
-        category: currentCategory,
+      const plugins = await api.getPlugins({
+        q: query || currentCategory,
         limit: 20,
       });
       renderPlugins(resultsContainer, plugins);
@@ -211,58 +227,59 @@
         return;
       }
 
-      title.textContent = plugin.displayName;
+      const displayName = esc(plugin.display_name || plugin.name);
+      const icon = esc(plugin.logo || '📦');
+      const stars = plugin.stars ?? 0;
+      const id = esc(plugin.id);
+
+      title.textContent = displayName;
       content.innerHTML = `
         <div class="marketplace-detail-header">
-          <div class="marketplace-detail-icon">${plugin.icon || '📦'}</div>
+          <div class="marketplace-detail-icon">${icon}</div>
           <div class="marketplace-detail-info">
-            <div class="marketplace-detail-name">${plugin.displayName}</div>
+            <div class="marketplace-detail-name">${displayName}</div>
             <div class="marketplace-detail-meta">
-              <span>by ${plugin.author}</span>
-              <span>v${plugin.version}</span>
-              <span>⭐ ${plugin.rating.toFixed(1)} (${plugin.ratingCount} 评价)</span>
-              <span>⬇️ ${formatNumber(plugin.downloads)} 下载</span>
-              <span>${plugin.license || '未知许可证'}</span>
+              <span>by ${esc(plugin.author || '未知')}</span>
+              <span>v${esc(plugin.version || '?')}</span>
+              <span>⭐ ${formatNumber(stars)} stars</span>
+              ${plugin.category ? `<span>📂 ${esc(plugin.category)}</span>` : ''}
+              <span>📅 ${formatDate(plugin.updated_at)}</span>
             </div>
             <div class="marketplace-detail-actions">
-              <button class="btn btn-primary" onclick="window._marketplace.install('${plugin.id}')">安装</button>
-              ${plugin.homepage ? `<button class="btn btn-secondary" onclick="window.open('${plugin.homepage}', '_blank')">主页</button>` : ''}
-              ${plugin.repository ? `<button class="btn btn-secondary" onclick="window.open('${plugin.repository}', '_blank')">仓库</button>` : ''}
+              <button class="btn btn-primary" onclick="window._marketplace.install('${id}')">安装</button>
+              ${plugin.repo ? `<button class="btn btn-secondary" onclick="window.open('${esc(plugin.repo)}', '_blank')">仓库</button>` : ''}
             </div>
           </div>
         </div>
 
         <div class="marketplace-tabs">
           <div class="marketplace-tab active" data-tab="description">描述</div>
-          <div class="marketplace-tab" data-tab="versions">版本</div>
-          <div class="marketplace-tab" data-tab="dependencies">依赖</div>
+          <div class="marketplace-tab" data-tab="info">详情</div>
         </div>
 
         <div class="marketplace-tab-content active" id="tab-description">
-          <p style="color:var(--text-secondary);line-height:1.6">${plugin.description || '暂无描述'}</p>
-          ${plugin.readme ? `<div style="margin-top:var(--space-4);white-space:pre-wrap;color:var(--text-secondary)">${plugin.readme}</div>` : ''}
-        </div>
-
-        <div class="marketplace-tab-content" id="tab-versions">
-          <div class="loading-overlay"><div class="spinner"></div></div>
-        </div>
-
-        <div class="marketplace-tab-content" id="tab-dependencies">
-          ${plugin.dependencies && plugin.dependencies.length > 0
-            ? `<ul style="list-style:none">${plugin.dependencies.map(dep => `
-                <li style="padding:var(--space-2) 0;border-bottom:1px solid var(--border)">
-                  <a href="#" onclick="window._marketplace.showDetail('${dep.pluginId}');return false">${dep.pluginId}</a>
-                  <span style="color:var(--text-muted);margin-left:var(--space-2)">${dep.versionRange}</span>
-                  ${dep.optional ? '<span style="color:var(--text-muted);margin-left:var(--space-2)">(可选)</span>' : ''}
-                </li>
-              `).join('')}</ul>`
-            : '<div style="color:var(--text-muted)">无依赖</div>'
+          <p style="color:var(--text-secondary);line-height:1.6">${esc(plugin.description || '暂无描述')}</p>
+          ${plugin.tags && plugin.tags.length > 0
+            ? `<div style="margin-top:var(--space-4);display:flex;gap:var(--space-2);flex-wrap:wrap">
+                ${plugin.tags.map(t => `<span style="background:var(--bg-secondary);padding:2px 8px;border-radius:4px;font-size:0.85em">${esc(t)}</span>`).join('')}
+              </div>`
+            : ''
           }
         </div>
-      `;
 
-      // Load versions
-      loadVersions(pluginId);
+        <div class="marketplace-tab-content" id="tab-info">
+          <table style="width:100%;color:var(--text-secondary)">
+            <tr><td style="padding:4px 8px;font-weight:bold">插件 ID</td><td>${id}</td></tr>
+            <tr><td style="padding:4px 8px;font-weight:bold">名称</td><td>${esc(plugin.name)}</td></tr>
+            <tr><td style="padding:4px 8px;font-weight:bold">版本</td><td>${esc(plugin.version || '未知')}</td></tr>
+            <tr><td style="padding:4px 8px;font-weight:bold">作者</td><td>${esc(plugin.author || '未知')}</td></tr>
+            <tr><td style="padding:4px 8px;font-weight:bold">仓库</td><td>${plugin.repo ? `<a href="${esc(plugin.repo)}" target="_blank">${esc(plugin.repo)}</a>` : '未知'}</td></tr>
+            <tr><td style="padding:4px 8px;font-weight:bold">分类</td><td>${esc(plugin.category || '未分类')}</td></tr>
+            <tr><td style="padding:4px 8px;font-weight:bold">最后更新</td><td>${formatDate(plugin.updated_at)}</td></tr>
+            <tr><td style="padding:4px 8px;font-weight:bold">NNBot 版本</td><td>${esc(plugin.nnbot_version || '未知')}</td></tr>
+          </table>
+        </div>
+      `;
 
       // Setup tabs
       content.querySelectorAll('.marketplace-tab').forEach(tab => {
@@ -276,35 +293,6 @@
     } catch (err) {
       title.textContent = '加载失败';
       content.innerHTML = '<div style="text-align:center;padding:var(--space-6);color:var(--text-muted)">加载插件详情失败</div>';
-    }
-  }
-
-  // Load versions
-  async function loadVersions(pluginId) {
-    const container = document.getElementById('tab-versions');
-    try {
-      const versions = await api.getVersions(pluginId);
-      if (versions.length === 0) {
-        container.innerHTML = '<div style="color:var(--text-muted)">暂无版本</div>';
-        return;
-      }
-      container.innerHTML = `
-        <ul class="marketplace-versions-list">
-          ${versions.map(v => `
-            <li class="marketplace-version-item">
-              <div>
-                <div class="marketplace-version-info">
-                  <span class="marketplace-version-tag">${v.version}</span>
-                  <span class="marketplace-version-date">${formatDate(v.releasedAt)}</span>
-                </div>
-                ${v.changelog ? `<div class="marketplace-version-changelog">${v.changelog}</div>` : ''}
-              </div>
-            </li>
-          `).join('')}
-        </ul>
-      `;
-    } catch (err) {
-      container.innerHTML = '<div style="color:var(--text-muted)">加载版本失败</div>';
     }
   }
 
@@ -323,23 +311,23 @@
 
       content.innerHTML = `
         <div class="marketplace-installed-list">
-          ${plugins.map(p => `
+          ${plugins.map(p => {
+            const pid = esc(p.pluginId);
+            return `
             <div class="marketplace-installed-item">
               <div class="marketplace-installed-info">
                 <span class="marketplace-installed-status">${p.enabled ? '✅' : '⏸️'}</span>
                 <div>
-                  <span class="marketplace-installed-name">${p.name}</span>
-                  <span class="marketplace-installed-version">v${p.version}</span>
-                  ${p.hasUpdate ? `<span class="marketplace-installed-update">(有更新: v${p.latestVersion})</span>` : ''}
+                  <span class="marketplace-installed-name">${esc(p.name)}</span>
+                  <span class="marketplace-installed-version">v${esc(p.version)}</span>
                 </div>
               </div>
               <div class="marketplace-installed-actions">
-                ${p.hasUpdate ? `<button class="btn btn-sm btn-primary" onclick="window._marketplace.update('${p.pluginId}')">更新</button>` : ''}
-                <button class="btn btn-sm btn-secondary" onclick="window._marketplace.toggle('${p.pluginId}', ${p.enabled})">${p.enabled ? '禁用' : '启用'}</button>
-                <button class="btn btn-sm btn-danger" onclick="window._marketplace.uninstall('${p.pluginId}')">卸载</button>
+                <button class="btn btn-sm btn-secondary" onclick="window._marketplace.toggle('${pid}', ${p.enabled})">${p.enabled ? '禁用' : '启用'}</button>
+                <button class="btn btn-sm btn-danger" onclick="window._marketplace.uninstall('${pid}')">卸载</button>
               </div>
             </div>
-          `).join('')}
+          `}).join('')}
         </div>
       `;
     } catch (err) {
@@ -396,9 +384,16 @@
 
   // Toggle plugin
   async function toggle(pluginId, currentlyEnabled) {
-    // This would call NNBot's internal API
-    alert(`插件 ${pluginId} 已${currentlyEnabled ? '禁用' : '启用'}`);
-    showInstalled();
+    try {
+      const result = await api.togglePlugin(pluginId, !currentlyEnabled);
+      if (result.success) {
+        showInstalled();
+      } else {
+        alert('操作失败: ' + (result.error || '未知错误'));
+      }
+    } catch (err) {
+      alert('操作失败: ' + err.message);
+    }
   }
 
   // Close modals
@@ -442,7 +437,6 @@
     if (publishForm) {
       publishForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        // This would call the marketplace API
         alert('发布功能需要配置市场服务器');
         closePublish();
       });
@@ -479,10 +473,8 @@
   // Initialize
   let initialized = false;
   function init() {
-    console.log('[Marketplace] Init called, initialized:', initialized);
     if (initialized) return;
     initialized = true;
-    console.log('[Marketplace] Setting up event listeners and loading data...');
     setupEventListeners();
     loadPopular();
     loadRecommended();
