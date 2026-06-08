@@ -1,9 +1,15 @@
 # NNBot
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Strict-3178c6.svg)](https://www.typescriptlang.org/)
+
 轻量级 QQ Bot 框架，专注于**极简插件开发**和**智能对话体验**。
 
+> A lightweight QQ Bot framework with **minimal plugin API**, **LLM integration**, **vector memory**, and a **WebUI dashboard**.
+
 ```bash
-# 5 行代码，一个插件
+# 5 行代码，一个插件 | Create a plugin in 5 lines
 export default createPlugin({
   name: "hello",
   async handle(event) {
@@ -11,6 +17,18 @@ export default createPlugin({
   },
 });
 ```
+
+## 🌟 Highlights
+
+| Feature | Description |
+|---------|-------------|
+| **Minimal Plugin API** | `createPlugin()` — zero boilerplate, services auto-injected |
+| **Hot Reload** | Edit plugins while running, changes take effect instantly |
+| **Smart Memory** | Vector search + full-text search + hybrid retrieval (RRF) |
+| **Multi-LLM** | OpenAI, Ollama, DeepSeek, SiliconFlow — switch with one config |
+| **Multimodal** | Image understanding & speech-to-text out of the box |
+| **WebUI Dashboard** | Configure everything via browser, no restart needed |
+| **Plugin Marketplace** | Browse, install, and publish plugins from the community |
 
 ## ✨ 核心特性
 
