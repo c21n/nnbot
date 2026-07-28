@@ -146,6 +146,7 @@ async function main() {
 
   // Create Fastify server
   const app = Fastify({ logger: false });
+  let restartScheduled = false;
 
   // WebUI: serve static files and config API
   await app.register(fastifyStatic, { root: WEBUI_DIR, prefix: "/" });
@@ -156,6 +157,20 @@ async function main() {
   // Health check endpoint
   app.get("/health", async () => {
     return { status: "ok", uptime: process.uptime() };
+  });
+
+  // Schedule a graceful process exit; systemd restarts the service on failure.
+  app.post("/api/system/restart", async (_request, reply) => {
+    if (restartScheduled) {
+      return reply.status(409).send({ success: false, error: "Restart already scheduled" });
+    }
+
+    restartScheduled = true;
+    setTimeout(() => {
+      process.kill(process.pid, "SIGTERM");
+    }, 150);
+
+    return reply.send({ success: true, data: { status: "restarting" } });
   });
 
   // OneBot event endpoint
@@ -214,7 +229,7 @@ async function main() {
     await app.close();
 
     logger.info("Goodbye!");
-    process.exit(0);
+    process.exit(restartScheduled ? 75 : 0);
   };
 
   process.on("SIGINT", shutdown);

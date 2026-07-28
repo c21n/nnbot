@@ -35,6 +35,16 @@ const API = {
   },
 
   // ── Persona ──
+  async restartService() {
+    const res = await fetchWithTimeout('/api/system/restart', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error);
+    return json.data;
+  },
+
   async getPersona() {
     const res = await fetchWithTimeout('/api/persona');
     const json = await res.json();

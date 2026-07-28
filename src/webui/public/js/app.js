@@ -77,6 +77,35 @@ function setupSaveButton() {
   if (resetBtn) {
     resetBtn.addEventListener('click', loadConfig);
   }
+
+  const restartBtn = document.getElementById('restart-btn');
+  if (restartBtn) {
+    restartBtn.addEventListener('click', restartService);
+  }
+}
+
+async function restartService() {
+  const btn = document.getElementById('restart-btn');
+  if (!window.confirm('确定要重启 NNBot 服务吗？当前连接会短暂中断。')) {
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '重启中...';
+  }
+
+  try {
+    await API.restartService();
+    toast.info('服务正在重启，请稍候...');
+    window.setTimeout(() => window.location.reload(), 3000);
+  } catch (error) {
+    toast.error(`重启失败: ${error.message}`);
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '重启服务';
+    }
+  }
 }
 
 // ── Routes ──
