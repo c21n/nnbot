@@ -192,8 +192,11 @@ class AIChatPluginImpl {
       };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      console.error(`\x1b[31m[AI] LLM call failed: ${msg}\x1b[0m`);
-      return null;
+      logger.error(`[AI] LLM call failed: ${msg}`);
+      return {
+        content: "暂时无法回复，请稍后再试。",
+        replyTo: true,
+      };
     }
   }
 

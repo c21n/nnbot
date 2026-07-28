@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { EventType } from "../../interfaces.js";
-import { createWeComMarkdownReply, parseWeComMessage } from "./wecom-bot-adapter.js";
+import {
+  createWeComMarkdownReply,
+  createWeComStreamReply,
+  parseWeComMessage,
+} from "./wecom-bot-adapter.js";
 
 describe("Enterprise WeChat protocol helpers", () => {
   it("maps a group text callback to the shared event model", () => {
@@ -50,6 +54,17 @@ describe("Enterprise WeChat protocol helpers", () => {
       body: {
         msgtype: "markdown",
         markdown: { content: "**已完成**" },
+      },
+    });
+  });
+
+  it("builds a stream update that reuses the stream id", () => {
+    expect(createWeComStreamReply("request-1", "stream-1", "正在处理", false)).toEqual({
+      cmd: "aibot_respond_msg",
+      headers: { req_id: "request-1" },
+      body: {
+        msgtype: "stream",
+        stream: { id: "stream-1", content: "正在处理", finish: false },
       },
     });
   });

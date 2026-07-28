@@ -19,6 +19,7 @@ import type {
 } from "../../interfaces.js";
 import type { ITool } from "../tools/types.js";
 import { toolToOpenAISchema } from "../tools/schema-adapter.js";
+import { logger } from "../../core/logger.js";
 
 export class OpenAICompatibleService implements ILLMService {
   private client: AxiosInstance;
@@ -57,7 +58,7 @@ export class OpenAICompatibleService implements ILLMService {
     this.availableModels = await this.listModels();
 
     if (this.availableModels.length === 0) {
-      console.error("\x1b[31m[LLM] No models available\x1b[0m");
+      logger.error("[LLM] No models available; check the provider API key and base URL");
       return;
     }
 
@@ -66,8 +67,8 @@ export class OpenAICompatibleService implements ILLMService {
       this.defaultModel = this.availableModels[0];
     }
 
-    console.log(`\x1b[32m[LLM] Available models: ${this.availableModels.join(", ")}\x1b[0m`);
-    console.log(`\x1b[32m[LLM] Using model: ${this.defaultModel}\x1b[0m`);
+    logger.info(`[LLM] Available models: ${this.availableModels.join(", ")}`);
+    logger.info(`[LLM] Using model: ${this.defaultModel}`);
   }
 
   async chat(
@@ -202,7 +203,7 @@ export class OpenAICompatibleService implements ILLMService {
       return models.map((model: { id: string }) => model.id);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      console.error(`\x1b[31m[LLM] Failed to fetch models: ${message}\x1b[0m`);
+      logger.error(`[LLM] Failed to fetch models: ${message}`);
       return [];
     }
   }

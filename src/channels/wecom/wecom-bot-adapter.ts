@@ -117,6 +117,27 @@ export function createWeComMarkdownReply(
   };
 }
 
+/** Build a streaming reply. Each update replaces the previous content in WeCom. */
+export function createWeComStreamReply(
+  requestId: string,
+  streamId: string,
+  content: string,
+  finish: boolean
+): WeComCommand {
+  return {
+    cmd: "aibot_respond_msg",
+    headers: { req_id: requestId },
+    body: {
+      msgtype: "stream",
+      stream: {
+        id: streamId,
+        content,
+        finish,
+      },
+    },
+  };
+}
+
 export class WeComBotAdapter {
   private readonly config: WeComBotConfig;
   private socket: WebSocket | null = null;
@@ -164,7 +185,11 @@ export class WeComBotAdapter {
       throw new Error("Enterprise WeChat response is missing the callback req_id");
     }
 
-    const result = await this.sendCommand(createWeComMarkdownReply(requestId, response.content));
+    const streamId = readString(event.raw.wecom_stream_id);
+    const command = streamId
+      ? createWeComStreamReply(requestId, streamId, response.content, true)
+      : createWeComMarkdownReply(requestId, response.content);
+    const result = await this.sendCommand(command);
     if (result.errcode !== 0) {
       throw new Error(`Enterprise WeChat reply failed: ${result.errmsg ?? result.errcode}`);
     }
@@ -270,12 +295,32 @@ export class WeComBotAdapter {
       return;
     }
 
+    const streamId = randomUUID();
+    const streamEvent: Event = {
+      ...event,
+      raw: {
+        ...event.raw,
+        wecom_stream_id: streamId,
+      },
+    };
     const responder: EventResponder = async (replyEvent, response) => {
       await this.sendResponse(replyEvent, response);
     };
-    void this.onEvent(event, responder).catch((error) => {
-      logger.error(`Enterprise WeChat message handling failed: ${error}`);
-    });
+
+    // A stream placeholder must be sent before model work starts. Otherwise
+    // the callback can expire while the message buffer or LLM is still busy.
+    void this.sendCommand(
+      createWeComStreamReply(requestId ?? randomUUID(), streamId, "正在处理，请稍候…", false)
+    )
+      .then((result) => {
+        if (result.errcode !== 0) {
+          throw new Error(`Enterprise WeChat processing notice failed: ${result.errmsg ?? result.errcode}`);
+        }
+        return this.onEvent!(streamEvent, responder);
+      })
+      .catch((error) => {
+        logger.error(`Enterprise WeChat message handling failed: ${error}`);
+      });
   }
 
   private async sendCommand(command: WeComCommand, socket = this.socket): Promise<WeComEnvelope> {
