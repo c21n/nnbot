@@ -36,6 +36,11 @@ export interface WeComCommand {
   readonly body?: Record<string, unknown>;
 }
 
+export interface WeComReplyImage {
+  readonly base64: string;
+  readonly md5: string;
+}
+
 export type WeComEventHandler = (event: Event, responder: EventResponder) => Promise<void>;
 
 interface PendingRequest {
@@ -52,6 +57,26 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 
 function readString(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function readResponseImages(response: Response): WeComReplyImage[] {
+  const rawAttachments = response.extra?.attachments;
+  if (!Array.isArray(rawAttachments)) {
+    return [];
+  }
+
+  return rawAttachments
+    .filter((attachment): attachment is { type: "image"; base64: string; md5: string } => {
+      if (!attachment || typeof attachment !== "object") return false;
+      const item = attachment as Record<string, unknown>;
+      return item.type === "image"
+        && typeof item.base64 === "string"
+        && item.base64.length > 0
+        && typeof item.md5 === "string"
+        && item.md5.length > 0;
+    })
+    .slice(0, 2)
+    .map((attachment) => ({ base64: attachment.base64, md5: attachment.md5 }));
 }
 
 function stripRobotMention(content: string): string {
@@ -122,17 +147,49 @@ export function createWeComStreamReply(
   requestId: string,
   streamId: string,
   content: string,
-  finish: boolean
+  finish: boolean,
+  images: readonly WeComReplyImage[] = [],
 ): WeComCommand {
+  const stream: Record<string, unknown> = {
+    id: streamId,
+    content,
+    finish,
+  };
+  if (finish && images.length > 0) {
+    stream.msg_item = images.map((image) => ({
+      msgtype: "image",
+      image: { base64: image.base64, md5: image.md5 },
+    }));
+  }
+
   return {
     cmd: "aibot_respond_msg",
     headers: { req_id: requestId },
     body: {
       msgtype: "stream",
-      stream: {
-        id: streamId,
-        content,
-        finish,
+      stream,
+    },
+  };
+}
+
+export function createWeComMixedReply(
+  requestId: string,
+  content: string,
+  images: readonly WeComReplyImage[],
+): WeComCommand {
+  return {
+    cmd: "aibot_respond_msg",
+    headers: { req_id: requestId },
+    body: {
+      msgtype: "mixed",
+      mixed: {
+        msg_item: [
+          { msgtype: "text", text: { content } },
+          ...images.map((image) => ({
+            msgtype: "image",
+            image: { base64: image.base64, md5: image.md5 },
+          })),
+        ],
       },
     },
   };
@@ -186,9 +243,12 @@ export class WeComBotAdapter {
     }
 
     const streamId = readString(event.raw.wecom_stream_id);
+    const images = readResponseImages(response);
     const command = streamId
-      ? createWeComStreamReply(requestId, streamId, response.content, true)
-      : createWeComMarkdownReply(requestId, response.content);
+      ? createWeComStreamReply(requestId, streamId, response.content, true, images)
+      : images.length > 0
+        ? createWeComMixedReply(requestId, response.content, images)
+        : createWeComMarkdownReply(requestId, response.content);
     const result = await this.sendCommand(command);
     if (result.errcode !== 0) {
       throw new Error(`Enterprise WeChat reply failed: ${result.errmsg ?? result.errcode}`);

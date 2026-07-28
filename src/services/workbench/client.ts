@@ -1,4 +1,5 @@
 import type { WorkbenchConfig } from "../../interfaces.js";
+import { createHash } from "node:crypto";
 
 export interface KnowledgeEvidence {
   readonly chunkId: string;
@@ -27,6 +28,13 @@ export interface PolicyMatchResponse {
 
 export interface PerformanceRankingResponse {
   readonly rows: readonly Record<string, unknown>[];
+}
+
+export interface PerformanceRankingImage {
+  readonly base64: string;
+  readonly md5: string;
+  readonly fileName: string;
+  readonly contentType: string;
 }
 
 export class WorkbenchApiError extends Error {
@@ -89,6 +97,30 @@ export class WorkbenchApiClient {
     );
   }
 
+  async getPerformanceRankingImage(
+    view: "teams" | "people",
+    filters: Record<string, string> = {},
+  ): Promise<PerformanceRankingImage> {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(filters)) {
+      if (value) params.set(key, value);
+    }
+
+    const query = params.toString();
+    const endpoint = `/api/performance/rankings/${view}/export-image${query ? `?${query}` : ""}`;
+    const response = await this.requestBinary(endpoint);
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const contentDisposition = response.headers.get("content-disposition") ?? "";
+    const fileNameMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+
+    return {
+      base64: buffer.toString("base64"),
+      md5: createHash("md5").update(buffer).digest("hex"),
+      fileName: fileNameMatch?.[1] ? decodeURIComponent(fileNameMatch[1]) : `performance-${view}.png`,
+      contentType: response.headers.get("content-type")?.split(";", 1)[0] || "image/png",
+    };
+  }
+
   private async request<T>(endpoint: string, init: RequestInit = {}): Promise<T> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
@@ -115,6 +147,39 @@ export class WorkbenchApiClient {
       }
 
       return payload as T;
+    } catch (error) {
+      if (error instanceof WorkbenchApiError) throw error;
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw new WorkbenchApiError(endpoint, 408, "工作台请求超时");
+      }
+      const message = error instanceof Error ? error.message : String(error);
+      throw new WorkbenchApiError(endpoint, 0, `工作台连接失败：${message}`);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  private async requestBinary(endpoint: string): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    const headers = new Headers({ Accept: "image/png" });
+    if (this.accessToken) headers.set("Authorization", `Bearer ${this.accessToken}`);
+
+    try {
+      const response = await fetch(`${this.baseUrl}${endpoint}`, {
+        headers,
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        const payload = parseJson(text);
+        throw new WorkbenchApiError(
+          endpoint,
+          response.status,
+          readErrorMessage(payload) || `工作台请求失败（HTTP ${response.status}）`,
+        );
+      }
+      return response;
     } catch (error) {
       if (error instanceof WorkbenchApiError) throw error;
       if (error instanceof DOMException && error.name === "AbortError") {

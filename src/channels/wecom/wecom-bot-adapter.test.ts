@@ -68,4 +68,18 @@ describe("Enterprise WeChat protocol helpers", () => {
       },
     });
   });
+
+  it("appends image items to the final stream reply", () => {
+    expect(createWeComStreamReply("request-1", "stream-1", "排行榜已生成", true, [
+      { base64: "aW1hZ2U=", md5: "image-md5" },
+    ])).toMatchObject({
+      body: {
+        msgtype: "stream",
+        stream: {
+          finish: true,
+          msg_item: [{ msgtype: "image", image: { base64: "aW1hZ2U=", md5: "image-md5" } }],
+        },
+      },
+    });
+  });
 });

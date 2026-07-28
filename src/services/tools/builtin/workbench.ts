@@ -1,4 +1,4 @@
-import type { ITool, ToolContext, ToolParameter, ToolResult } from "../types.js";
+import type { ITool, ToolAttachment, ToolContext, ToolParameter, ToolResult } from "../types.js";
 import { WorkbenchApiClient, type WorkbenchApiError } from "../../workbench/client.js";
 
 const MAX_KNOWLEDGE_LIMIT = 10;
@@ -127,7 +127,7 @@ export class WorkbenchPerformanceTool implements ITool {
     const filters = pickStringFilters(args, ["batchId", "region", "team"]);
 
     try {
-      const result = scope === "both"
+      const rankingResults = scope === "both"
         ? await Promise.all([
             this.client.getPerformanceRankings("teams", filters),
             this.client.getPerformanceRankings("people", filters),
@@ -136,17 +136,30 @@ export class WorkbenchPerformanceTool implements ITool {
 
       const payload = scope === "both"
         ? {
-            teams: result[0].rows.slice(0, MAX_RANKING_ROWS),
-            people: result[1].rows.slice(0, MAX_RANKING_ROWS),
+            teams: rankingResults[0].rows.slice(0, MAX_RANKING_ROWS),
+            people: rankingResults[1].rows.slice(0, MAX_RANKING_ROWS),
           }
         : {
-            [scope]: result[0].rows.slice(0, MAX_RANKING_ROWS),
+            [scope]: rankingResults[0].rows.slice(0, MAX_RANKING_ROWS),
           };
+
+      const imageViews: Array<"teams" | "people"> = scope === "both" ? ["teams", "people"] : [scope];
+      const imageResults = await Promise.all(
+        imageViews.map((imageView) => this.client.getPerformanceRankingImage(imageView, filters)),
+      );
+      const attachments: ToolAttachment[] = imageResults.map((image) => ({
+        type: "image",
+        base64: image.base64,
+        md5: image.md5,
+        fileName: image.fileName,
+        contentType: image.contentType,
+      }));
 
       return success(JSON.stringify(payload, null, 2), {
         scope,
         filters,
-      });
+        imageCount: attachments.length,
+      }, attachments);
     } catch (error) {
       return workbenchFailure(error);
     }
@@ -175,8 +188,12 @@ function pickStringFilters(
   return filters;
 }
 
-function success(content: string, metadata?: Record<string, unknown>): ToolResult {
-  return { success: true, content, metadata };
+function success(
+  content: string,
+  metadata?: Record<string, unknown>,
+  attachments?: readonly ToolAttachment[],
+): ToolResult {
+  return { success: true, content, metadata, attachments };
 }
 
 function failure(content: string): ToolResult {

@@ -8,6 +8,8 @@
 export type {
   ToolParameter,
   ToolResult,
+  ToolAttachment,
+  ToolLoopResult,
   ToolContext,
   ITool,
   IToolFactory,

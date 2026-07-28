@@ -39,8 +39,23 @@ export interface ToolResult {
   readonly content: string;
   /** Optional: message sent directly to user (bypasses LLM) */
   readonly directMessage?: string;
+  /** Optional media to append to the final channel response. */
+  readonly attachments?: readonly ToolAttachment[];
   /** Optional: extra data for logging/debugging (not returned to LLM) */
   readonly metadata?: Record<string, unknown>;
+}
+
+export interface ToolAttachment {
+  readonly type: "image";
+  readonly base64: string;
+  readonly md5: string;
+  readonly fileName?: string;
+  readonly contentType?: string;
+}
+
+export interface ToolLoopResult {
+  readonly content: string;
+  readonly attachments: readonly ToolAttachment[];
 }
 
 /**

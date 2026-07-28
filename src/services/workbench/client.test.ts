@@ -30,6 +30,36 @@ describe("WorkbenchApiClient", () => {
     expect(headers.get("Accept")).toBe("application/json");
   });
 
+  it("downloads a ranking image and converts it to a channel attachment", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(Buffer.from("image-bytes"), {
+          status: 200,
+          headers: {
+            "content-type": "image/png",
+            "content-disposition": "inline; filename=ranking.png",
+          },
+        }),
+      ),
+    );
+
+    const client = new WorkbenchApiClient({
+      enabled: true,
+      baseUrl: "http://127.0.0.1:4177",
+    });
+
+    const image = await client.getPerformanceRankingImage("teams", { team: "营销一部" });
+
+    expect(image.base64).toBe("aW1hZ2UtYnl0ZXM=");
+    expect(image.md5).toHaveLength(32);
+    expect(image.fileName).toBe("ranking.png");
+    expect(fetch).toHaveBeenCalledWith(
+      "http://127.0.0.1:4177/api/performance/rankings/teams/export-image?team=%E8%90%A5%E9%94%80%E4%B8%80%E9%83%A8",
+      expect.objectContaining({ headers: expect.any(Headers) }),
+    );
+  });
+
   it("turns non-success responses into a typed API error", async () => {
     vi.stubGlobal(
       "fetch",

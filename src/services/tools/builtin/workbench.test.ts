@@ -23,6 +23,9 @@ describe("Workbench tools", () => {
 
   it("can request both performance ranking scopes", async () => {
     const client = {
+      getPerformanceRankingImage: vi.fn()
+        .mockResolvedValueOnce({ base64: "teams-image", md5: "teams-md5", fileName: "teams.png", contentType: "image/png" })
+        .mockResolvedValueOnce({ base64: "people-image", md5: "people-md5", fileName: "people.png", contentType: "image/png" }),
       getPerformanceRankings: vi.fn()
         .mockResolvedValueOnce({ rows: [{ team: "营销一部" }] })
         .mockResolvedValueOnce({ rows: [{ name: "张三" }] }),
@@ -35,5 +38,7 @@ describe("Workbench tools", () => {
     expect(result.content).toContain("营销一部");
     expect(result.content).toContain("张三");
     expect(client.getPerformanceRankings).toHaveBeenCalledTimes(2);
+    expect(result.attachments).toHaveLength(2);
+    expect(client.getPerformanceRankingImage).toHaveBeenCalledTimes(2);
   });
 });

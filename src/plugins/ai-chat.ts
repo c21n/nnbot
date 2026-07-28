@@ -19,7 +19,7 @@ import { OpenAICompatibleService } from "../services/llm/openai.js";
 import { createPlugin } from "../core/create-plugin.js";
 import { PLUGIN_PRIORITY } from "../constants.js";
 import { logger } from "../core/logger.js";
-import { runToolLoop, type IToolRegistry, type ToolContext } from "../services/tools/index.js";
+import { runToolLoop, type IToolRegistry, type ToolAttachment, type ToolContext } from "../services/tools/index.js";
 
 
 /**
@@ -147,6 +147,7 @@ class AIChatPluginImpl {
       logger.plugin("ai_chat", `上下文: ${rounds} 轮${summary ? ' + 摘要' : ''}`);
 
       let reply: string;
+      let attachments: ToolAttachment[] = [];
       const hasToolSupport = typeof this.llm.chatWithTools === "function";
 
       // Get tools matching user intent (lazy instantiation + global exclude)
@@ -166,13 +167,15 @@ class AIChatPluginImpl {
           timeout: 30000,  // default, overridden by ToolLoopConfig.toolTimeout if set
         };
 
-        reply = await runToolLoop(
+        const toolLoopResult = await runToolLoop(
           finalMessages,
           activeTools,
           toolContext,
           { chatWithTools: (msgs, tools) => this.llm.chatWithTools!(msgs, tools) },
           { maxSteps: 10, toolTimeout: 30000, logToolCalls: true }
         );
+        reply = toolLoopResult.content;
+        attachments = [...toolLoopResult.attachments];
       } else {
         // Plain chat (no tools)
         reply = await this.llm.chat(finalMessages);
@@ -190,6 +193,7 @@ class AIChatPluginImpl {
       return {
         content: reply,
         replyTo: true,
+        extra: attachments.length > 0 ? { attachments } : undefined,
       };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
