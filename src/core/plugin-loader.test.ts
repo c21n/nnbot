@@ -64,4 +64,30 @@ describe("PluginLoader", () => {
       await rm(dir, { recursive: true, force: true });
     }
   });
+
+  it("loads all plugins when the enabled list is empty", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "nnbot-plugin-loader-"));
+
+    try {
+      await writeFile(
+        join(dir, "auto.js"),
+        "export default { name: 'auto', handle: async () => null };\n",
+        "utf8"
+      );
+      await writeFile(
+        join(dir, "disabled.js"),
+        "export default { name: 'disabled', handle: async () => null };\n",
+        "utf8"
+      );
+
+      const plugins = await new PluginLoader().loadFromDir(
+        dir,
+        mockServices([], ["disabled"])
+      );
+
+      expect(plugins.map((plugin) => plugin.name)).toEqual(["auto"]);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
 });

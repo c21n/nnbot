@@ -44,12 +44,20 @@ export class MessageBuffer {
         existing.multimodalContents.push(...event.multimodal.contents);
       }
       clearTimeout(existing.timer);
-      existing.timer = setTimeout(() => void this.flush(key), this.delay);
+      existing.timer = setTimeout(() => {
+        void this.flush(key).catch((error: unknown) => {
+          logger.error(`[Buffer] Flush failed for ${event.userId}: ${error}`);
+        });
+      }, this.delay);
       logger.debug(`[Buffer] appended message for ${event.userId}; total=${existing.messages.length}`);
       return;
     }
 
-    const timer = setTimeout(() => void this.flush(key), this.delay);
+    const timer = setTimeout(() => {
+      void this.flush(key).catch((error: unknown) => {
+        logger.error(`[Buffer] Flush failed for ${event.userId}: ${error}`);
+      });
+    }, this.delay);
     this.buffers.set(key, {
       event,
       messages: [event.message],

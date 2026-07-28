@@ -50,7 +50,8 @@ export class PluginLoader implements IPluginLoader {
       .filter((file) => {
         const name = basename(file, extname(file));
         const pluginId = normalizePluginId(name);
-        return enabled.has(pluginId) && !disabled.has(pluginId);
+        // An empty allow-list means load every plugin; disabled remains an explicit deny-list.
+        return (enabled.size === 0 || enabled.has(pluginId)) && !disabled.has(pluginId);
       });
 
     // Load each plugin

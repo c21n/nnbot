@@ -244,6 +244,7 @@ export class WeComBotAdapter {
 
     const streamId = readString(event.raw.wecom_stream_id);
     const images = readResponseImages(response);
+    logger.info(`[WeCom] Sending response: stream=${streamId ? "yes" : "no"}, images=${images.length}`);
     const command = streamId
       ? createWeComStreamReply(requestId, streamId, response.content, true, images)
       : images.length > 0
