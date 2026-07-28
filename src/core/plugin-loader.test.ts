@@ -79,6 +79,11 @@ describe("PluginLoader", () => {
         "export default { name: 'disabled', handle: async () => null };\n",
         "utf8"
       );
+      await writeFile(
+        join(dir, "types.d.ts"),
+        "export default { name: 'types', handle: async () => null };\n",
+        "utf8"
+      );
 
       const plugins = await new PluginLoader().loadFromDir(
         dir,

@@ -118,11 +118,16 @@ export class PluginLoader implements IPluginLoader {
 
   /**
    * Check if a filename is a valid plugin file
-   * Only .ts and .js files, excluding __tests__, index, and _ prefixed
+   * Only .ts and .js files, excluding declaration files, index, and _ prefixed
    */
   private isValidPluginFile(file: string): boolean {
     const ext = extname(file);
     const name = basename(file, ext);
+
+    // TypeScript declaration files are build artifacts, not executable plugins.
+    if (file.endsWith(".d.ts")) {
+      return false;
+    }
 
     // Only .ts and .js files
     if (ext !== ".ts" && ext !== ".js") {
