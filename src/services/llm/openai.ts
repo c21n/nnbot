@@ -58,6 +58,13 @@ export class OpenAICompatibleService implements ILLMService {
     this.availableModels = await this.listModels();
 
     if (this.availableModels.length === 0) {
+      if (this.defaultModel) {
+        logger.warn(
+          `[LLM] Model directory unavailable; using configured model: ${this.defaultModel}`
+        );
+        return;
+      }
+
       logger.error("[LLM] No models available; check the provider API key and base URL");
       return;
     }
