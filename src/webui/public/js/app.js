@@ -60,9 +60,12 @@ function setupMobileMenu() {
   });
 
   // Close sidebar on navigation (mobile)
-  router.onChange = () => {
+  router.onChange = page => {
     sidebar?.classList.remove('open');
     overlay?.classList.remove('active');
+    if (page !== 'dashboard') {
+      destroyDashboard();
+    }
   };
 }
 

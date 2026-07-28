@@ -35,6 +35,13 @@ const API = {
   },
 
   // ── Persona ──
+  async getLogs(limit = 100) {
+    const res = await fetchWithTimeout(`/api/system/logs?limit=${encodeURIComponent(limit)}`);
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error);
+    return json.data;
+  },
+
   async restartService() {
     const res = await fetchWithTimeout('/api/system/restart', {
       method: 'POST',

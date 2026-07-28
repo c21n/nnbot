@@ -1,21 +1,35 @@
 // ── Dashboard Page ──
 import API from '../api.js';
-import toast from '../toast.js';
+import { esc } from '../utils.js';
 
 let healthInterval = null;
+let logInterval = null;
 
 export function initDashboard() {
+  destroyDashboard();
   loadHealth();
   loadRecentUsers();
+  loadLogs();
 
-  // Auto-refresh health every 30s
   healthInterval = setInterval(loadHealth, 30000);
+  logInterval = setInterval(loadLogs, 5000);
+
+  const refreshButton = document.getElementById('logs-refresh');
+  if (refreshButton) {
+    refreshButton.onclick = () => {
+      void loadLogs();
+    };
+  }
 }
 
 export function destroyDashboard() {
   if (healthInterval) {
     clearInterval(healthInterval);
     healthInterval = null;
+  }
+  if (logInterval) {
+    clearInterval(logInterval);
+    logInterval = null;
   }
 }
 
@@ -65,6 +79,34 @@ async function loadRecentUsers() {
   } catch {
     // Silently fail - dashboard is best-effort
   }
+}
+
+async function loadLogs() {
+  const container = document.getElementById('system-logs');
+  if (!container) return;
+
+  try {
+    const logs = await API.getLogs(100);
+    if (logs.length === 0) {
+      container.innerHTML = '<div class="empty-state"><p>暂无运行日志</p></div>';
+      return;
+    }
+
+    container.innerHTML = logs.map(log => `
+      <div class="log-row log-${esc(log.level)}">
+        <span class="log-time">${esc(formatLogTime(log.timestamp))}</span>
+        <span class="log-level">${esc(log.level.toUpperCase())}</span>
+        <span class="log-message">${esc(log.message)}</span>
+      </div>
+    `).join('');
+  } catch {
+    container.innerHTML = '<div class="empty-state"><p>日志暂时无法加载</p></div>';
+  }
+}
+
+function formatLogTime(timestamp) {
+  const date = new Date(timestamp);
+  return Number.isNaN(date.getTime()) ? timestamp : date.toLocaleTimeString('zh-CN', { hour12: false });
 }
 
 function formatUptime(seconds) {

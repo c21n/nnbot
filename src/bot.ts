@@ -159,6 +159,13 @@ async function main() {
     return { status: "ok", uptime: process.uptime() };
   });
 
+  app.get("/api/system/logs", async (request) => {
+    const query = request.query as { limit?: string };
+    const parsedLimit = Number.parseInt(query.limit ?? "100", 10);
+    const limit = Number.isFinite(parsedLimit) ? parsedLimit : 100;
+    return { success: true, data: logger.getRecentLogs(limit) };
+  });
+
   // Schedule a graceful process exit; systemd restarts the service on failure.
   app.post("/api/system/restart", async (_request, reply) => {
     if (restartScheduled) {

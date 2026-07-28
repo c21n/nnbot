@@ -39,6 +39,73 @@
   flex-wrap: wrap;
 }
 
+.log-monitor-card {
+  grid-column: 1 / -1;
+}
+
+.system-logs {
+  max-height: 420px;
+  overflow: auto;
+  background: var(--surface-0);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.log-row {
+  display: grid;
+  grid-template-columns: 92px 58px minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+  line-height: var(--leading-normal);
+}
+
+.log-row:last-child {
+  border-bottom: 0;
+}
+
+.log-time {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.log-level {
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.04em;
+}
+
+.log-message {
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.log-info .log-level {
+  color: var(--color-success);
+}
+
+.log-debug .log-level {
+  color: var(--color-info);
+}
+
+.log-warn .log-level {
+  color: var(--color-warning);
+}
+
+.log-error .log-level {
+  color: var(--color-error);
+}
+
+@media (max-width: 640px) {
+  .log-row {
+    grid-template-columns: 76px 48px minmax(0, 1fr);
+    gap: var(--space-2);
+    padding-inline: var(--space-2);
+  }
+}
+
 /* ── Provider Cards ── */
 .provider-card {
   background: var(--surface-1);
