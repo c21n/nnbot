@@ -179,7 +179,7 @@ export class OpenAICompatibleService implements ILLMService {
       temperature: options?.temperature ?? this.defaultTemperature,
       max_tokens: options?.maxTokens ?? this.defaultMaxTokens,
       tools: toolSchemas.length > 0 ? toolSchemas : undefined,
-      tool_choice: toolSchemas.length > 0 ? "auto" : undefined,
+      tool_choice: toolSchemas.length > 0 ? (options?.toolChoice ?? "auto") : undefined,
     });
 
     const choice = response.data.choices[0];

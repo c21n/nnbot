@@ -2,7 +2,7 @@
  * Tool loop that coordinates LLM calls and local tool execution.
  */
 
-import type { LLMMessage } from "../../interfaces.js";
+import type { LLMChatOptions, LLMMessage } from "../../interfaces.js";
 import type {
   ITool,
   ToolAttachment,
@@ -20,7 +20,7 @@ export async function runToolLoop(
   messages: LLMMessage[],
   tools: ITool[],
   context: ToolContext,
-  llm: { chatWithTools: (messages: LLMMessage[], tools: ITool[]) => Promise<{
+  llm: { chatWithTools: (messages: LLMMessage[], tools: ITool[], options?: LLMChatOptions) => Promise<{
     content: string | null;
     toolCalls: Array<{ id: string; name: string; arguments: Record<string, unknown> }>;
     done: boolean;
@@ -39,7 +39,9 @@ export async function runToolLoop(
   for (let step = 0; step < maxSteps; step += 1) {
     if (logToolCalls) logger.info(`[ToolLoop] Step ${step + 1}/${maxSteps}`);
 
-    const response = await llm.chatWithTools(workingMessages, tools);
+    const response = await llm.chatWithTools(workingMessages, tools, {
+      toolChoice: step === 0 && config?.requireToolCall ? "required" : "auto",
+    });
     if (response.done || response.toolCalls.length === 0) {
       return {
         content: response.content ?? "",

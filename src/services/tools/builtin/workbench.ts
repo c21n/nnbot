@@ -155,7 +155,15 @@ export class WorkbenchPerformanceTool implements ITool {
         contentType: image.contentType,
       }));
 
-      return success(JSON.stringify(payload, null, 2), {
+      return success(JSON.stringify({
+        ...payload,
+        imageExport: {
+          generated: true,
+          format: "png",
+          count: attachments.length,
+          note: "The generated image will be sent with the final channel response.",
+        },
+      }, null, 2), {
         scope,
         filters,
         imageCount: attachments.length,

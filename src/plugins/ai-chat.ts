@@ -19,7 +19,13 @@ import { OpenAICompatibleService } from "../services/llm/openai.js";
 import { createPlugin } from "../core/create-plugin.js";
 import { PLUGIN_PRIORITY } from "../constants.js";
 import { logger } from "../core/logger.js";
-import { runToolLoop, type IToolRegistry, type ToolAttachment, type ToolContext } from "../services/tools/index.js";
+import {
+  executeTool,
+  runToolLoop,
+  type IToolRegistry,
+  type ToolAttachment,
+  type ToolContext,
+} from "../services/tools/index.js";
 
 
 /**
@@ -84,6 +90,8 @@ class AIChatPluginImpl {
     if (event.groupId && !isWeComMessage && !event.message.startsWith("@")) {
       return null;
     }
+
+    let responseAttachments: ToolAttachment[] = [];
 
     try {
       // Get persona for this user
@@ -157,6 +165,8 @@ class AIChatPluginImpl {
 
       if (activeTools.length > 0) {
         // Use tool loop
+        const requireToolCall = activeTools.length === 1
+          && activeTools[0].name === "workbench_performance_ranking";
         logger.plugin("ai_chat", `工具调用已启用: ${activeTools.map((t) => t.name).join(", ")}`);
 
         const toolContext: ToolContext = {
@@ -167,15 +177,56 @@ class AIChatPluginImpl {
           timeout: 30000,  // default, overridden by ToolLoopConfig.toolTimeout if set
         };
 
-        const toolLoopResult = await runToolLoop(
-          finalMessages,
-          activeTools,
-          toolContext,
-          { chatWithTools: (msgs, tools) => this.llm.chatWithTools!(msgs, tools) },
-          { maxSteps: 10, toolTimeout: 30000, logToolCalls: true }
+        const performanceTool = activeTools.find(
+          (tool) => tool.name === "workbench_performance_ranking",
         );
-        reply = toolLoopResult.content;
-        attachments = [...toolLoopResult.attachments];
+
+        if (performanceTool) {
+          const toolResult = await executeTool(
+            performanceTool,
+            {
+              id: "forced-workbench-performance",
+              name: performanceTool.name,
+              arguments: buildPerformanceToolArguments(event.message),
+            },
+            toolContext,
+          );
+          attachments = [...(toolResult.attachments ?? [])];
+          responseAttachments = attachments;
+
+          if (!toolResult.success) {
+            reply = toolResult.content;
+          } else {
+            try {
+              reply = await this.llm.chat([
+                ...finalMessages,
+                {
+                  role: "user",
+                  content: [
+                    "系统已直接执行业绩排行榜工具。",
+                    toolResult.content,
+                    "请根据工具结果直接回答用户；如果用户询问排行或导出图片，请说明图片已随本次回复发送。不要声称没有导出功能。",
+                  ].join("\n\n"),
+                },
+              ]);
+            } catch (error) {
+              const message = error instanceof Error ? error.message : String(error);
+              logger.warn(`[ai_chat] Ranking summary failed after tool execution: ${message}`);
+              reply = "业绩排行榜图片已生成，将随本次回复发送。";
+            }
+          }
+        } else {
+          const toolLoopResult = await runToolLoop(
+            finalMessages,
+            activeTools,
+            toolContext,
+            { chatWithTools: (msgs, tools, options) => this.llm.chatWithTools!(msgs, tools, options) },
+            { maxSteps: 10, toolTimeout: 30000, logToolCalls: true, requireToolCall }
+          );
+          reply = toolLoopResult.content;
+          attachments = [...toolLoopResult.attachments];
+          responseAttachments = attachments;
+        }
       } else {
         // Plain chat (no tools)
         reply = await this.llm.chat(finalMessages);
@@ -193,7 +244,7 @@ class AIChatPluginImpl {
       return {
         content: reply,
         replyTo: true,
-        extra: attachments.length > 0 ? { attachments } : undefined,
+        extra: responseAttachments.length > 0 ? { attachments: responseAttachments } : undefined,
       };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
@@ -238,6 +289,16 @@ class AIChatPluginImpl {
 
     return parts.join("\n");
   }
+}
+
+function buildPerformanceToolArguments(message: string): Record<string, unknown> {
+  if (/个人.*团队|团队.*个人|个人和团队|全部排行/.test(message)) {
+    return { scope: "both" };
+  }
+  if (/个人/.test(message)) {
+    return { scope: "people" };
+  }
+  return { scope: "teams" };
 }
 
 // Create plugin wrapper using createPlugin

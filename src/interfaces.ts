@@ -210,6 +210,8 @@ export interface LLMChatOptions {
   model?: string;
   temperature?: number;
   maxTokens?: number;
+  /** Controls whether an OpenAI-compatible provider must select a tool. */
+  toolChoice?: "auto" | "required";
 }
 
 // ============ AI Chat Hooks ============

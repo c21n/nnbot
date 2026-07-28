@@ -181,6 +181,8 @@ export interface ToolLoopConfig {
   readonly toolTimeout?: number;
   /** Whether to log tool calls, default: true */
   readonly logToolCalls?: boolean;
+  /** Force a tool call on the first LLM step when intent matching is deterministic. */
+  readonly requireToolCall?: boolean;
 }
 
 // ============ Schema Formats ============
