@@ -17,6 +17,8 @@ import type { IToolFactory } from "../services/tools/types.js";
 
 export default createPlugin({
   name: "workbench",
+  // This plugin only registers model tools and does not handle chat events.
+  hooks: {},
   description: "智能业务工作台 API 工具",
 
   async onLoad(services) {
