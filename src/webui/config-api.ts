@@ -195,6 +195,69 @@ function extractApiKeys(config: Config): { keys: Record<string, string>; clean: 
 
 // ── Routes ──
 
+type ProviderTestRequest = {
+  baseUrl?: string;
+  apiKey?: string;
+  type?: "openai" | "ollama";
+  model?: string;
+};
+
+function normalizeProviderTestUrl(baseUrl: string, type: "openai" | "ollama"): string {
+  const trimmed = baseUrl.trim().replace(/\/+$/, "");
+  let parsed: URL;
+
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    throw new Error("Base URL 格式不正确");
+  }
+
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("Base URL 只支持 HTTP 或 HTTPS");
+  }
+
+  if (type === "ollama" && !/\/v1$/i.test(trimmed)) {
+    return `${trimmed}/v1`;
+  }
+
+  return trimmed;
+}
+
+function getStringValue(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function getProviderTestError(error: unknown): string {
+  if (axios.isAxiosError(error)) {
+    const status = error.response?.status;
+    const responseData = error.response?.data as {
+      error?: unknown;
+      message?: unknown;
+    } | undefined;
+    const errorObject = responseData?.error;
+    const detail = getStringValue(
+      typeof errorObject === "string"
+        ? errorObject
+        : (errorObject as { message?: unknown } | undefined)?.message
+    ) ?? getStringValue(responseData?.message);
+
+    if (status) {
+      return detail
+        ? `模型服务返回 HTTP ${status}: ${detail.slice(0, 180)}`
+        : `模型服务返回 HTTP ${status}`;
+    }
+
+    if (error.code === "ECONNABORTED" || error.code === "ETIMEDOUT") {
+      return "连接模型服务超时，请检查地址、网络和服务状态";
+    }
+
+    return "无法连接到模型服务，请检查 Base URL 和网络";
+  }
+
+  if (error instanceof Error) return error.message;
+  return "模型连接测试失败";
+}
+
 export async function configApi(app: FastifyInstance): Promise<void> {
   /**
    * GET /api/config — Read current config
@@ -385,6 +448,68 @@ export async function configApi(app: FastifyInstance): Promise<void> {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return reply.send(fail(message));
+    }
+  });
+
+  /**
+   * POST /api/providers/test — Test a provider endpoint and a model with a short chat request
+   */
+  app.post("/api/providers/test", async (request, reply) => {
+    const body = (request.body ?? {}) as ProviderTestRequest;
+    const type = body.type === "ollama" ? "ollama" : "openai";
+    const baseUrl = body.baseUrl?.trim() ?? "";
+    const model = body.model?.trim() ?? "";
+    const apiKey = body.apiKey?.trim() ?? "";
+
+    if (!baseUrl) {
+      return reply.status(400).send(fail("请填写 Base URL"));
+    }
+    if (!model) {
+      return reply.status(400).send(fail("请填写要测试的模型 ID"));
+    }
+
+    let endpoint: string;
+    try {
+      endpoint = normalizeProviderTestUrl(baseUrl, type);
+    } catch (error) {
+      return reply.status(400).send(fail(error instanceof Error ? error.message : "Base URL 无效"));
+    }
+
+    const startedAt = Date.now();
+
+    try {
+      const client = axios.create({
+        baseURL: endpoint,
+        headers: {
+          ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+          "Content-Type": "application/json",
+        },
+        timeout: 15000,
+      });
+      const response = await client.post("/chat/completions", {
+        model,
+        messages: [{ role: "user", content: "Reply with OK only." }],
+        temperature: 0,
+        max_tokens: 8,
+      });
+
+      const responseData = response.data as {
+        model?: unknown;
+        choices?: Array<{ message?: { content?: unknown } }>;
+      };
+      const preview = getStringValue(responseData.choices?.[0]?.message?.content);
+
+      if (!preview) {
+        return reply.send(fail("模型接口已响应，但没有返回文本"));
+      }
+
+      return reply.send(ok({
+        model: getStringValue(responseData.model) ?? model,
+        latencyMs: Date.now() - startedAt,
+        preview: preview.slice(0, 240),
+      }));
+    } catch (error) {
+      return reply.send(fail(getProviderTestError(error)));
     }
   });
 

@@ -3,9 +3,9 @@
 
 const REQUEST_TIMEOUT = 10000; // 10 seconds
 
-async function fetchWithTimeout(url, options = {}) {
+async function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(url, { ...options, signal: controller.signal });
     return res;
@@ -82,6 +82,17 @@ const API = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ baseUrl, apiKey, type }),
     });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error);
+    return json.data;
+  },
+
+  async testProvider(data) {
+    const res = await fetchWithTimeout('/api/providers/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }, 20000);
     const json = await res.json();
     if (!json.success) throw new Error(json.error);
     return json.data;

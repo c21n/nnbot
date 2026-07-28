@@ -95,6 +95,10 @@ function renderProviders() {
           <button class="btn btn-sm btn-ghost" id="fetch-btn-${index}" onclick="window._providers.fetchModels(${index})">
             刷新模型目录
           </button>
+          <button class="btn btn-sm btn-secondary" id="test-btn-${index}" onclick="window._providers.testConnection(${index})">
+            测试连接
+          </button>
+          <span id="test-status-${index}" style="font-size:var(--text-xs);color:var(--text-muted)"></span>
           <span id="fetch-status-${index}" style="font-size:var(--text-xs);color:var(--text-muted)"></span>
         </label>
         <input class="form-input" type="text" list="models-${index}" data-provider="${index}" data-field="defaultModel"
@@ -462,6 +466,57 @@ async function fetchModels(index) {
   }
 }
 
+async function testConnection(index) {
+  const card = document.querySelector(`.provider-card[data-index="${index}"]`);
+  if (!card) return;
+
+  const baseUrl = card.querySelector('[data-field="baseUrl"]')?.value?.trim();
+  const apiKey = card.querySelector('[data-field="apiKey"]')?.value?.trim();
+  const type = card.querySelector('[data-field="type"]')?.value || 'openai';
+  const model = card.querySelector('[data-field="defaultModel"]')?.value?.trim();
+  const statusEl = document.getElementById(`test-status-${index}`);
+  const btnEl = document.getElementById(`test-btn-${index}`);
+
+  if (!baseUrl) {
+    toast.error('请先填写 Base URL');
+    return;
+  }
+  if (!model) {
+    toast.error('请先填写要测试的模型 ID');
+    return;
+  }
+
+  if (statusEl) {
+    statusEl.textContent = '测试中...';
+    statusEl.style.color = 'var(--text-muted)';
+  }
+  if (btnEl) {
+    btnEl.disabled = true;
+    btnEl.textContent = '测试中...';
+  }
+
+  try {
+    const result = await API.testProvider({ baseUrl, apiKey, type, model });
+    if (statusEl) {
+      statusEl.textContent = `✓ 连接成功 · ${result.latencyMs} ms · ${result.preview}`;
+      statusEl.style.color = 'var(--color-success, #16a34a)';
+    }
+    toast.success(`模型 ${result.model} 测试成功`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (statusEl) {
+      statusEl.textContent = `✕ ${message}`;
+      statusEl.style.color = 'var(--color-danger, #dc2626)';
+    }
+    toast.error(`连接测试失败: ${message}`);
+  } finally {
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.textContent = '测试连接';
+    }
+  }
+}
+
 function addModel(providerIndex) {
   if (!config.providers?.list?.[providerIndex]) return;
   const provider = config.providers.list[providerIndex];
@@ -577,6 +632,7 @@ window._providers = {
   applyPreset,
   onTypeChange,
   fetchModels,
+  testConnection,
   addModel,
   removeModel,
   save: saveProviders,
