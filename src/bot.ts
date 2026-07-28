@@ -37,25 +37,34 @@ async function main() {
 
   // Initialize services
   const storage = await SQLiteStorage.create(config.storage.path);
-  const llmProvider = resolveLLMProvider(config.llm);
-  const llm = new OpenAICompatibleService(
-    llmProvider.baseUrl,
-    llmProvider.apiKey,
-    {
-      model: llmProvider.model,
-      temperature: llmProvider.temperature,
-      maxTokens: llmProvider.maxTokens,
-    }
-  );
-
-  // Initialize LLM (fetch available models)
-  logger.info(`Using LLM provider: ${llmProvider.name}`);
-  await llm.init();
-
   // Initialize unified provider manager
   const providersConfig = resolveProvidersConfig(config);
   const providerManager = new ProviderManager(providersConfig);
   logger.info(`ProviderManager: ${providersConfig.list.length} providers configured`);
+
+  // Prefer the unified provider selected in WebUI. Fall back to the legacy
+  // llm.providers format for existing installations without provider defaults.
+  let llm: OpenAICompatibleService;
+  const unifiedLLMProviderId = providersConfig.defaults.llm?.providerId;
+  if (unifiedLLMProviderId) {
+    llm = providerManager.getLLMService(unifiedLLMProviderId);
+    logger.info(`Using LLM provider: ${unifiedLLMProviderId}`);
+  } else {
+    const llmProvider = resolveLLMProvider(config.llm);
+    llm = new OpenAICompatibleService(
+      llmProvider.baseUrl,
+      llmProvider.apiKey,
+      {
+        model: llmProvider.model,
+        temperature: llmProvider.temperature,
+        maxTokens: llmProvider.maxTokens,
+      }
+    );
+    logger.info(`Using legacy LLM provider: ${llmProvider.name}`);
+  }
+
+  // Initialize LLM (fetch available models)
+  await llm.init();
 
   // Initialize OneBot adapter
   const onebot = new OneBotAdapter(config.onebot);
