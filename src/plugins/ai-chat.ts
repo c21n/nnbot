@@ -78,9 +78,10 @@ class AIChatPluginImpl {
       return null;
     }
 
-    // Only handle direct messages (not group messages)
-    // Group messages require @mention to trigger
-    if (event.groupId && !event.message.startsWith("@")) {
+    // OneBot keeps the @mention in the normalized message. The WeCom adapter
+    // removes it before dispatch because the callback already targets this bot.
+    const isWeComMessage = event.raw.channel === "wecom";
+    if (event.groupId && !isWeComMessage && !event.message.startsWith("@")) {
       return null;
     }
 
