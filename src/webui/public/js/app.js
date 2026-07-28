@@ -225,6 +225,8 @@ async function saveConfig() {
       : config.providers; // Preserve existing providers if no cards
 
     const newConfig = {
+      // Preserve integration sections that are not edited by this WebUI page.
+      ...config,
       ...settings,
       llm: config.llm, // Preserve existing LLM config
       providers: providersConfig,
