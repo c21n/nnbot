@@ -246,16 +246,47 @@ export async function configApi(app: FastifyInstance): Promise<void> {
         ? parseYaml(readFileSync(CONFIG_PATH, "utf-8")) as Config
         : undefined;
       const storedWecom = storedConfig?.wecom;
-      const configToSave = config.wecom && storedWecom
-        ? {
-            ...config,
-            wecom: {
-              ...config.wecom,
-              botId: config.wecom.botId || storedWecom.botId,
-              secret: config.wecom.secret || storedWecom.secret,
-            },
-          }
-        : config;
+      const storedLLMProviders = storedConfig?.llm?.providers ?? {};
+      const storedProviders = new Map(
+        (storedConfig?.providers?.list ?? []).map(provider => [provider.id, provider])
+      );
+      const configToSave: Config = {
+        ...config,
+        llm: {
+          ...config.llm,
+          providers: Object.fromEntries(
+            Object.entries(config.llm.providers ?? {}).map(([id, provider]) => [
+              id,
+              {
+                ...provider,
+                // Keep an existing env reference when the WebUI leaves the key blank.
+                apiKey: provider.apiKey || storedLLMProviders[id]?.apiKey || "",
+              },
+            ])
+          ),
+        },
+        ...(config.providers
+          ? {
+              providers: {
+                ...config.providers,
+                list: config.providers.list.map(provider => ({
+                  ...provider,
+                  // Keep an existing env reference when the WebUI leaves the key blank.
+                  apiKey: provider.apiKey || storedProviders.get(provider.id)?.apiKey,
+                })),
+              },
+            }
+          : {}),
+        ...(config.wecom && storedWecom
+          ? {
+              wecom: {
+                ...config.wecom,
+                botId: config.wecom.botId || storedWecom.botId,
+                secret: config.wecom.secret || storedWecom.secret,
+              },
+            }
+          : {}),
+      };
 
       // Extract API keys to .env, replace with ${VAR} refs.
       const { keys, clean } = extractApiKeys(configToSave);

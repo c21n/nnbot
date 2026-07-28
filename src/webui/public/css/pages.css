@@ -99,6 +99,16 @@
 }
 
 @media (max-width: 640px) {
+  .provider-card-header,
+  .model-discovery-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .model-discovery-search {
+    width: 100%;
+  }
+
   .log-row {
     grid-template-columns: 76px 48px minmax(0, 1fr);
     gap: var(--space-2);
@@ -138,6 +148,99 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+.provider-model-count {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.model-section {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-4);
+}
+
+.model-section-header,
+.model-discovery-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.model-section-count {
+  min-width: 28px;
+  padding: 2px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  text-align: center;
+}
+
+.model-discovery {
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  background: var(--surface-0);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.model-discovery-header {
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+.model-discovery-header strong {
+  display: block;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+}
+
+.model-discovery-header .form-hint {
+  display: block;
+  margin-top: 2px;
+}
+
+.model-discovery-search {
+  width: min(220px, 42%);
+  min-height: 34px;
+}
+
+.model-discovery-list {
+  display: grid;
+  max-height: 240px;
+  overflow: auto;
+  border-top: 1px solid var(--color-border);
+}
+
+.model-discovery-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 42px;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.model-discovery-row:last-child {
+  border-bottom: 0;
+}
+
+.model-discovery-row code {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-discovery-row[hidden] {
+  display: none;
 }
 
 .provider-defaults {

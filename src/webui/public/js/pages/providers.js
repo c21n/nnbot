@@ -1,9 +1,10 @@
 // ── Providers Page ──
 import API from '../api.js';
 import toast from '../toast.js';
-import { esc, setVal } from '../utils.js';
+import { esc } from '../utils.js';
 
 let config = null;
+const discoveredModels = new Map();
 
 const LLM_PRESETS = {
   'OpenAI': { type: 'openai', baseUrl: 'https://api.openai.com/v1', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'] },
@@ -16,11 +17,13 @@ const LLM_PRESETS = {
 
 export function initProviders(cfg) {
   config = cfg;
+  discoveredModels.clear();
   renderProviders();
 }
 
 export function updateProvidersConfig(cfg) {
   config = cfg;
+  discoveredModels.clear();
   renderProviders();
 }
 
@@ -44,12 +47,15 @@ function renderProviders() {
     return;
   }
 
+  document.querySelectorAll('datalist[data-provider-datalist]').forEach(el => el.remove());
+
   container.innerHTML = providers.map((p, index) => `
     <div class="provider-card" data-index="${index}">
       <div class="provider-card-header">
         <div style="display:flex;align-items:center;gap:var(--space-3)">
           <h3>${esc(p.id)}</h3>
           <span class="type-badge ${p.type === 'ollama' ? 'event' : 'summary'}">${p.type}</span>
+          <span class="provider-model-count">${p.models?.length ?? 0} 个已启用模型</span>
         </div>
         <div style="display:flex;gap:var(--space-2)">
           <button class="btn btn-sm btn-ghost" onclick="window._providers.rename(${index})">重命名</button>
@@ -72,13 +78,14 @@ function renderProviders() {
               ${Object.keys(LLM_PRESETS).map(k => `<option value="${k}">${k}</option>`).join('')}
             </select>
           </label>
-          <input class="form-input" type="text" data-provider="${index}" data-field="baseUrl"
+          <input class="form-input" type="url" data-provider="${index}" data-field="baseUrl"
                  value="${esc(p.baseUrl ?? '')}" placeholder="https://api.openai.com/v1">
+          <div class="form-hint">OpenAI 兼容服务通常以 <code>/v1</code> 结尾；Ollama 填写服务根地址。</div>
         </div>
       </div>
       <div class="form-group">
         <label class="form-label">API Key</label>
-        <input class="form-input" type="password" data-provider="${index}" data-field="apiKey"
+        <input class="form-input" type="password" autocomplete="new-password" data-provider="${index}" data-field="apiKey"
                value="${esc(p.apiKey ?? '')}" placeholder="sk-... (Ollama 留空)">
         <div class="form-hint" id="apiKey-hint-${index}">${p.type === 'ollama' ? 'Ollama 通常不需要 API Key' : 'OpenAI 兼容接口需要 API Key'}</div>
       </div>
@@ -86,19 +93,24 @@ function renderProviders() {
         <label class="form-label" style="display:flex;align-items:center;gap:var(--space-2)">
           默认模型
           <button class="btn btn-sm btn-ghost" id="fetch-btn-${index}" onclick="window._providers.fetchModels(${index})">
-            获取模型
+            刷新模型目录
           </button>
           <span id="fetch-status-${index}" style="font-size:var(--text-xs);color:var(--text-muted)"></span>
         </label>
         <input class="form-input" type="text" list="models-${index}" data-provider="${index}" data-field="defaultModel"
                value="${esc(p.defaultModel ?? '')}" placeholder="选择或输入模型名称">
-        <datalist id="models-${index}">
+        <datalist id="models-${index}" data-provider-datalist="true">
           ${(p.models ?? []).map(m => `<option value="${esc(m.id)}">${esc(m.id)}</option>`).join('')}
         </datalist>
       </div>
-      <div class="form-group" style="margin-top:var(--space-4)">
-        <label class="form-label">模型列表 (可选)</label>
-        <div class="form-hint" style="margin-bottom:var(--space-2)">配置此供应商可用的模型，用于 WebUI 选择</div>
+      <div class="form-group model-section" style="margin-top:var(--space-4)">
+        <div class="model-section-header">
+          <div>
+            <label class="form-label">已启用模型</label>
+            <div class="form-hint">只有加入这里的模型，才会出现在默认模型选择中。</div>
+          </div>
+          <span class="model-section-count">${p.models?.length ?? 0}</span>
+        </div>
         <div id="models-list-${index}" class="list-editor">
           ${(p.models ?? []).map((m, mi) => `
             <div class="list-row">
@@ -116,6 +128,7 @@ function renderProviders() {
           `).join('')}
         </div>
         <button class="btn-add" onclick="window._providers.addModel(${index})">+ 添加模型</button>
+        ${renderDiscoveredModels(p, index)}
       </div>
     </div>
   `).join('');
@@ -124,12 +137,65 @@ function renderProviders() {
   providers.forEach((p, index) => {
     const modelsDatalist = document.createElement('datalist');
     modelsDatalist.id = `models-list-datalist-${index}`;
+    modelsDatalist.dataset.providerDatalist = 'true';
     (p.models ?? []).forEach(m => {
       const opt = document.createElement('option');
       opt.value = m.id;
       modelsDatalist.appendChild(opt);
     });
     document.body.appendChild(modelsDatalist);
+  });
+
+  bindModelDiscovery(container);
+}
+
+function renderDiscoveredModels(provider, index) {
+  const models = discoveredModels.get(provider.id) ?? [];
+  if (models.length === 0) return '';
+
+  const enabled = new Set((provider.models ?? []).map(model => model.id));
+  return `
+    <div class="model-discovery" data-discovery="${index}">
+      <div class="model-discovery-header">
+        <div>
+          <strong>服务商模型目录</strong>
+          <span class="form-hint">已读取 ${models.length} 个模型，点击“添加”启用</span>
+        </div>
+        <input class="form-input model-discovery-search" type="search" data-model-search="${index}" placeholder="筛选模型" aria-label="筛选模型">
+      </div>
+      <div class="model-discovery-list">
+        ${models.map(modelId => `
+          <div class="model-discovery-row" data-model-row="${esc(modelId.toLowerCase())}">
+            <code title="${esc(modelId)}">${esc(modelId)}</code>
+            <button class="btn btn-sm ${enabled.has(modelId) ? 'btn-secondary' : 'btn-ghost'}"
+                    type="button" data-action="add-discovered-model" data-provider-index="${index}" data-model-id="${esc(modelId)}"
+                    ${enabled.has(modelId) ? 'disabled' : ''}>
+              ${enabled.has(modelId) ? '已添加' : '添加'}
+            </button>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function bindModelDiscovery(container) {
+  container.querySelectorAll('[data-action="add-discovered-model"]').forEach(button => {
+    button.addEventListener('click', () => {
+      const index = Number(button.dataset.providerIndex);
+      const modelId = button.dataset.modelId;
+      if (Number.isInteger(index) && modelId) addDiscoveredModel(index, modelId);
+    });
+  });
+
+  container.querySelectorAll('[data-model-search]').forEach(input => {
+    input.addEventListener('input', () => {
+      const query = input.value.trim().toLowerCase();
+      const discovery = input.closest('[data-discovery]');
+      discovery?.querySelectorAll('[data-model-row]').forEach(row => {
+        row.hidden = query.length > 0 && !row.dataset.modelRow.includes(query);
+      });
+    });
   });
 }
 
@@ -194,21 +260,63 @@ function updateModelDropdown(purpose, providerId, providers, selectedModel) {
   select.innerHTML = '<option value="">-- 选择模型 --</option>';
 
   const provider = providers.find(p => p.id === providerId);
-  if (provider?.models) {
-    provider.models.forEach(m => {
-      if (purpose === 'llm' && (m.purpose === 'llm' || m.purpose === 'both')) {
-        select.innerHTML += `<option value="${esc(m.id)}">${esc(m.id)}</option>`;
-      } else if (purpose === 'vision' && (m.purpose === 'vision' || m.purpose === 'llm')) {
-        select.innerHTML += `<option value="${esc(m.id)}">${esc(m.id)}</option>`;
-      } else if (purpose === 'stt' && m.purpose === 'stt') {
-        select.innerHTML += `<option value="${esc(m.id)}">${esc(m.id)}</option>`;
-      } else if (purpose === 'embedding' && (m.purpose === 'embedding' || m.purpose === 'both')) {
-        select.innerHTML += `<option value="${esc(m.id)}">${esc(m.id)}${m.dimension ? ` (${m.dimension}d)` : ''}</option>`;
-      }
-    });
+  const models = [...(provider?.models ?? [])];
+
+  // A provider default model is valid even when the user has not fetched its catalog yet.
+  if (provider?.defaultModel && !models.some(model => model.id === provider.defaultModel)) {
+    models.push({ id: provider.defaultModel, purpose: purpose === 'embedding' ? 'embedding' : 'llm' });
+  }
+
+  const seen = new Set();
+  models.forEach(model => {
+    if (!model.id || seen.has(model.id) || !modelSupportsPurpose(model, purpose)) return;
+    seen.add(model.id);
+    const suffix = purpose === 'embedding' && model.dimension ? ` (${model.dimension}d)` : '';
+    select.innerHTML += `<option value="${esc(model.id)}">${esc(model.id)}${suffix}</option>`;
+  });
+
+  if (selectedModel && !seen.has(selectedModel)) {
+    select.innerHTML += `<option value="${esc(selectedModel)}">${esc(selectedModel)} (当前配置)</option>`;
   }
 
   if (selectedModel) select.value = selectedModel;
+}
+
+function modelSupportsPurpose(model, purpose) {
+  if (purpose === 'embedding') return model.purpose === 'embedding' || model.purpose === 'both';
+  if (purpose === 'vision') return model.purpose === 'vision' || model.purpose === 'llm' || model.purpose === 'both';
+  if (purpose === 'stt') return model.purpose === 'stt';
+  return !model.purpose || model.purpose === 'llm' || model.purpose === 'both';
+}
+
+function collectModelsFromCard(card) {
+  return Array.from(card.querySelectorAll('.list-row')).map(row => {
+    const modelId = row.querySelector('[data-model-index]')?.value?.trim();
+    if (!modelId) return null;
+
+    const purpose = row.querySelector('[data-model-purpose]')?.value || 'llm';
+    const dimensionValue = row.querySelector('[data-model-dimension]')?.value;
+    const dimension = dimensionValue ? Number.parseInt(dimensionValue, 10) : undefined;
+    return {
+      id: modelId,
+      purpose,
+      ...(Number.isFinite(dimension) ? { dimension } : {}),
+    };
+  }).filter(Boolean);
+}
+
+function syncProviderCard(index) {
+  const provider = config?.providers?.list?.[index];
+  const card = document.querySelector(`.provider-card[data-index="${index}"]`);
+  if (!provider || !card) return provider;
+
+  provider.type = card.querySelector('[data-field="type"]')?.value || provider.type || 'openai';
+  provider.baseUrl = card.querySelector('[data-field="baseUrl"]')?.value?.trim() || '';
+  provider.apiKey = card.querySelector('[data-field="apiKey"]')?.value?.trim() || '';
+  provider.defaultModel = card.querySelector('[data-field="defaultModel"]')?.value?.trim() || undefined;
+  const models = collectModelsFromCard(card);
+  provider.models = models.length > 0 ? models : undefined;
+  return provider;
 }
 
 // ── Provider CRUD ──
@@ -232,6 +340,7 @@ function addProvider() {
 
 function deleteProvider(index) {
   if (!config.providers?.list) return;
+  syncProviderCard(index);
   if (config.providers.list.length <= 1) {
     toast.error('至少保留一个供应商');
     return;
@@ -242,20 +351,21 @@ function deleteProvider(index) {
 
   config.providers.list.splice(index, 1);
 
-  // Update defaults if needed
-  if (config.providers.defaults.llm?.providerId === provider.id) {
-    config.providers.defaults.llm = undefined;
-  }
-  if (config.providers.defaults.embedding?.providerId === provider.id) {
-    config.providers.defaults.embedding = undefined;
-  }
+  // Clear every default that points to the deleted provider.
+  ['llm', 'vision', 'stt', 'embedding'].forEach(purpose => {
+    if (config.providers.defaults[purpose]?.providerId === provider.id) {
+      config.providers.defaults[purpose] = undefined;
+    }
+  });
 
+  discoveredModels.delete(provider.id);
   renderProviders();
   toast.success(`已删除供应商 "${provider.id}"`);
 }
 
 function renameProvider(index) {
   if (!config.providers?.list?.[index]) return;
+  syncProviderCard(index);
 
   const oldId = config.providers.list[index].id;
   const newId = prompt('新名称', oldId);
@@ -268,14 +378,18 @@ function renameProvider(index) {
   }
 
   config.providers.list[index].id = id;
+  const discovered = discoveredModels.get(oldId);
+  if (discovered) {
+    discoveredModels.delete(oldId);
+    discoveredModels.set(id, discovered);
+  }
 
   // Update defaults
-  if (config.providers.defaults.llm?.providerId === oldId) {
-    config.providers.defaults.llm.providerId = id;
-  }
-  if (config.providers.defaults.embedding?.providerId === oldId) {
-    config.providers.defaults.embedding.providerId = id;
-  }
+  ['llm', 'vision', 'stt', 'embedding'].forEach(purpose => {
+    if (config.providers.defaults[purpose]?.providerId === oldId) {
+      config.providers.defaults[purpose].providerId = id;
+    }
+  });
 
   renderProviders();
   toast.success(`已重命名为 "${id}"`);
@@ -297,15 +411,9 @@ function applyPreset(index, presetName) {
   const baseUrlInput = card.querySelector('[data-field="baseUrl"]');
   if (baseUrlInput) baseUrlInput.value = preset.baseUrl;
 
-  const datalist = document.getElementById(`models-${index}`);
-  if (datalist) {
-    datalist.innerHTML = '';
-    preset.models.forEach(m => {
-      const opt = document.createElement('option');
-      opt.value = m;
-      datalist.appendChild(opt);
-    });
-  }
+  const provider = syncProviderCard(index);
+  if (provider) discoveredModels.set(provider.id, [...preset.models]);
+  renderProviders();
 
   toast.success(`已应用 ${presetName} 预设`);
 }
@@ -320,6 +428,9 @@ function onTypeChange(index, type) {
 async function fetchModels(index) {
   const card = document.querySelector(`.provider-card[data-index="${index}"]`);
   if (!card) return;
+
+  const provider = syncProviderCard(index);
+  if (!provider) return;
 
   const baseUrl = card.querySelector('[data-field="baseUrl"]')?.value?.trim();
   const apiKey = card.querySelector('[data-field="apiKey"]')?.value?.trim();
@@ -336,45 +447,13 @@ async function fetchModels(index) {
   if (btnEl) btnEl.disabled = true;
 
   try {
-    const models = await API.fetchModels(baseUrl, apiKey, type);
+    const models = [...new Set((await API.fetchModels(baseUrl, apiKey, type)).filter(Boolean))];
+    discoveredModels.set(provider.id, models);
+    renderProviders();
 
-    // Update datalist for default model input
-    const datalist = document.getElementById(`models-${index}`);
-    if (datalist) {
-      datalist.innerHTML = '';
-      models.forEach(id => {
-        const opt = document.createElement('option');
-        opt.value = id;
-        datalist.appendChild(opt);
-      });
-    }
-
-    // Add datalist to each model ID input in the list
-    const modelsList = document.getElementById(`models-list-${index}`);
-    if (modelsList) {
-      // Create or update datalist for model inputs
-      let modelsDatalist = document.getElementById(`models-list-datalist-${index}`);
-      if (!modelsDatalist) {
-        modelsDatalist = document.createElement('datalist');
-        modelsDatalist.id = `models-list-datalist-${index}`;
-        document.body.appendChild(modelsDatalist);
-      }
-      modelsDatalist.innerHTML = '';
-      models.forEach(id => {
-        const opt = document.createElement('option');
-        opt.value = id;
-        modelsDatalist.appendChild(opt);
-      });
-
-      // Add datalist attribute to existing model inputs
-      modelsList.querySelectorAll('input[data-model-index]').forEach(input => {
-        input.setAttribute('list', `models-list-datalist-${index}`);
-        input.setAttribute('autocomplete', 'off');
-      });
-    }
-
-    if (statusEl) statusEl.textContent = `✓ 找到 ${models.length} 个模型`;
-    toast.success(`获取到 ${models.length} 个模型`);
+    const nextStatus = document.getElementById(`fetch-status-${index}`);
+    if (nextStatus) nextStatus.textContent = `✓ 找到 ${models.length} 个，可选择添加`;
+    toast.success(`获取到 ${models.length} 个模型，请选择要启用的模型`);
   } catch (e) {
     if (statusEl) statusEl.textContent = '✗ ' + e.message;
     toast.error('获取模型失败: ' + e.message);
@@ -386,22 +465,23 @@ async function fetchModels(index) {
 function addModel(providerIndex) {
   if (!config.providers?.list?.[providerIndex]) return;
   const provider = config.providers.list[providerIndex];
+  syncProviderCard(providerIndex);
   if (!provider.models) provider.models = [];
   provider.models.push({ id: '', purpose: 'llm' });
   renderProviders();
 
-  // Add datalist to new model input
-  setTimeout(() => {
-    const modelsList = document.getElementById(`models-list-${providerIndex}`);
-    const modelsDatalist = document.getElementById(`models-list-datalist-${providerIndex}`);
-    if (modelsList && modelsDatalist) {
-      const lastInput = modelsList.querySelector('.list-row:last-child input[data-model-index]');
-      if (lastInput) {
-        lastInput.setAttribute('list', `models-list-datalist-${providerIndex}`);
-        lastInput.setAttribute('autocomplete', 'off');
-      }
-    }
-  }, 0);
+}
+
+function addDiscoveredModel(providerIndex, modelId) {
+  const provider = syncProviderCard(providerIndex);
+  if (!provider) return;
+
+  if (!provider.models) provider.models = [];
+  if (provider.models.some(model => model.id === modelId)) return;
+
+  provider.models.push({ id: modelId, purpose: 'llm' });
+  renderProviders();
+  toast.success(`已启用模型 ${modelId}`);
 }
 
 // Save providers configuration
@@ -423,7 +503,7 @@ async function saveProviders() {
     // Save to server
     await API.saveConfig(config);
 
-    toast.success('供应商配置已保存');
+    toast.success('供应商配置已保存，重启服务后生效');
   } catch (e) {
     toast.error('保存失败: ' + e.message);
   } finally {
@@ -436,6 +516,7 @@ async function saveProviders() {
 
 function removeModel(providerIndex, modelIndex) {
   if (!config.providers?.list?.[providerIndex]?.models) return;
+  syncProviderCard(providerIndex);
   config.providers.list[providerIndex].models.splice(modelIndex, 1);
   renderProviders();
 }
@@ -446,26 +527,15 @@ export function collectProviders() {
 
   document.querySelectorAll('.provider-card').forEach(card => {
     const index = parseInt(card.dataset.index);
-    const id = card.querySelector('h3')?.textContent?.trim() || `provider_${index}`;
+    const currentProvider = config?.providers?.list?.[index];
+    const id = currentProvider?.id || card.querySelector('h3')?.textContent?.trim() || `provider_${index}`;
 
     const type = card.querySelector('[data-field="type"]')?.value || 'openai';
     const baseUrl = card.querySelector('[data-field="baseUrl"]')?.value || '';
     const apiKey = card.querySelector('[data-field="apiKey"]')?.value || '';
     const defaultModel = card.querySelector('[data-field="defaultModel"]')?.value || '';
 
-    // Collect models
-    const models = [];
-    const modelsList = card.querySelector(`#models-list-${index}`);
-    if (modelsList) {
-      modelsList.querySelectorAll('.list-row').forEach((row, mi) => {
-        const modelId = row.querySelector(`[data-model-index="${mi}"]`)?.value?.trim();
-        if (modelId) {
-          const purpose = row.querySelector(`[data-model-purpose="${mi}"]`)?.value || 'llm';
-          const dimension = parseInt(row.querySelector(`[data-model-dimension="${mi}"]`)?.value) || undefined;
-          models.push({ id: modelId, purpose, dimension });
-        }
-      });
-    }
+    const models = collectModelsFromCard(card);
 
     providers.push({
       id, type, baseUrl, apiKey,
