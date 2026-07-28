@@ -39,6 +39,7 @@ const API = {
     const res = await fetchWithTimeout('/api/system/restart', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
     });
     const json = await res.json();
     if (!json.success) throw new Error(json.error);
