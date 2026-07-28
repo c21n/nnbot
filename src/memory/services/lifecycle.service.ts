@@ -1,8 +1,8 @@
-import { IMemoryRepository, ISessionRepository, IUserIndexRepository } from '../storage/interfaces'
-import { ILock } from '../lock/lock.interface'
-import { Memory } from '../types'
-import { config } from '../config'
-import { logger } from '../utils/logger'
+import { IMemoryRepository, ISessionRepository, IUserIndexRepository } from '../storage/interfaces.js'
+import { ILock } from '../lock/lock.interface.js'
+import { Memory } from '../types/index.js'
+import { config } from '../config/index.js'
+import { logger } from '../utils/logger.js'
 import cron, { type ScheduledTask } from 'node-cron'
 
 const DECAY_RATE = config.lifecycle.decayRate

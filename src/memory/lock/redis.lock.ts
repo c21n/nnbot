@@ -1,6 +1,6 @@
 import Redis from 'ioredis'
-import { Lock } from './lock.interface'
-import { logger } from '../utils/logger'
+import { Lock } from './lock.interface.js'
+import { logger } from '../utils/logger.js'
 
 export class RedisLock implements Lock {
   private redis: Redis

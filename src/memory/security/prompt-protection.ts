@@ -1,5 +1,5 @@
-import { ChatMessage } from '../types'
-import { SearchResult } from '../types/search.types'
+import { ChatMessage } from '../types/index.js'
+import { SearchResult } from '../types/search.types.js'
 
 export function buildPromptWithProtection(
   userMessage: string,

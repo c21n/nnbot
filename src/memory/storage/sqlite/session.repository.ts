@@ -1,6 +1,6 @@
-import { getSqliteConnection } from './connection'
-import { ISessionRepository } from '../interfaces'
-import { Session } from '../../types'
+import { getSqliteConnection } from './connection.js'
+import { ISessionRepository } from '../interfaces.js'
+import { Session } from '../../types/index.js'
 
 export class SqliteSessionRepository implements ISessionRepository {
   async save(session: Session): Promise<void> {

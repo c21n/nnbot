@@ -1,4 +1,4 @@
-import { UserProfile } from './memory.types'
+import { UserProfile } from './memory.types.js'
 
 export interface ExportMemory {
   text: string

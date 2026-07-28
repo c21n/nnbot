@@ -1,0 +1,20 @@
+[Unit]
+Description=NNBot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/apps/nnbot
+Environment=NODE_ENV=production
+EnvironmentFile=-/home/ubuntu/apps/nnbot/.env
+ExecStart=/usr/bin/node /home/ubuntu/apps/nnbot/dist/bot.js
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

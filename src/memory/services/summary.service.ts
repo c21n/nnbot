@@ -1,10 +1,10 @@
-import { IMessageRepository, IMemoryRepository, ISummaryRepository } from '../storage/interfaces'
-import { ILLMProvider } from '../providers/llm.provider'
-import { IEmbeddingProvider } from '../providers/embedding.provider'
-import { generateId } from '../utils/id'
-import { logger } from '../utils/logger'
-import { config } from '../config'
-import { PROMPTS } from '../config/prompts'
+import { IMessageRepository, IMemoryRepository, ISummaryRepository } from '../storage/interfaces.js'
+import { ILLMProvider } from '../providers/llm.provider.js'
+import { IEmbeddingProvider } from '../providers/embedding.provider.js'
+import { generateId } from '../utils/id.js'
+import { logger } from '../utils/logger.js'
+import { config } from '../config/index.js'
+import { PROMPTS } from '../config/prompts.js'
 
 export class SummaryService {
   constructor(

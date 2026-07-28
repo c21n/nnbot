@@ -9,7 +9,7 @@
  * k=60 is the standard value from the original paper.
  */
 
-import { RankedResult } from './types'
+import { RankedResult } from './types.js'
 
 const DEFAULT_K = 60
 

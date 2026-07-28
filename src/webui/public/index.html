@@ -523,6 +523,34 @@
       <div id="page-settings" class="page">
         <div class="card" style="margin-bottom:var(--space-4)">
           <div class="card-header">
+            <div class="card-title">企业微信智能机器人</div>
+          </div>
+          <div class="form-group">
+            <label class="form-checkbox">
+              <input id="wecom-enabled" type="checkbox">
+              <span>启用企业微信机器人</span>
+            </label>
+            <div class="form-hint">使用 API 模式长连接，不需要配置回调 URL。</div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Bot ID</label>
+              <input id="wecom-botId" class="form-input" type="text" autocomplete="off" placeholder="填写企业微信机器人 Bot ID">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Secret</label>
+              <input id="wecom-secret" class="form-input" type="password" autocomplete="new-password" placeholder="填写企微机器人 Secret">
+              <div class="form-hint">Secret 已配置时不会回显；留空保存可保持原值。</div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">WebSocket 地址</label>
+            <input id="wecom-websocketUrl" class="form-input" type="url" placeholder="wss://openws.work.weixin.qq.com">
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:var(--space-4)">
+          <div class="card-header">
             <div class="card-title">服务器配置</div>
           </div>
           <div class="form-row">

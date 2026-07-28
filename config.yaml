@@ -3,6 +3,11 @@ server:
   port: 8080
 onebot:
   url: http://127.0.0.1:3000
+wecom:
+  enabled: false
+  websocketUrl: wss://openws.work.weixin.qq.com
+  botId: ${WECOM_BOT_ID}
+  secret: ${WECOM_BOT_SECRET}
 storage:
   type: sqlite
   path: data/bot.db

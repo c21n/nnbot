@@ -1,5 +1,5 @@
-import { IMemoryRepository } from '../storage/interfaces'
-import { logger } from '../utils/logger'
+import { IMemoryRepository } from '../storage/interfaces.js'
+import { logger } from '../utils/logger.js'
 
 export class BatchOperationService {
   constructor(private memoryRepo: IMemoryRepository) {}

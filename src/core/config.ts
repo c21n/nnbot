@@ -94,6 +94,7 @@ export class ConfigManager {
       rules: overrides.rules ?? defaults.rules,
       admin: { ...defaults.admin, ...overrides.admin },
       context: { ...defaults.context, ...overrides.context },
+      wecom: overrides.wecom ?? defaults.wecom,
       tools: overrides.tools,
       providers: overrides.providers ?? defaults.providers,
       memory: overrides.memory ?? defaults.memory,
@@ -193,6 +194,15 @@ export class ConfigManager {
         ...config.onebot,
         accessToken: substitute(config.onebot.accessToken) as string | undefined,
       },
+      ...(config.wecom
+        ? {
+            wecom: {
+              ...config.wecom,
+              botId: substitute(config.wecom.botId) as string,
+              secret: substitute(config.wecom.secret) as string,
+            },
+          }
+        : {}),
       memory,
       tools,
       providers: providersConfig,

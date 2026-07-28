@@ -338,6 +338,13 @@ onebot:
   url: "http://127.0.0.1:3000"
   accessToken: ""  # 可选
 
+# 企业微信智能机器人（API 模式，长连接，可选）
+wecom:
+  enabled: false
+  websocketUrl: "wss://openws.work.weixin.qq.com"
+  botId: "${WECOM_BOT_ID}"
+  secret: "${WECOM_BOT_SECRET}"
+
 # LLM 配置（支持多 provider）
 llm:
   currentProvider: "openai"

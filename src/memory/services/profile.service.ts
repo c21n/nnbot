@@ -1,9 +1,9 @@
-import { IProfileRepository } from '../storage/interfaces'
-import { ILLMProvider } from '../providers/llm.provider'
-import { UserProfile, Message } from '../types'
-import { ExtractedUserInfo } from '../types/profile.types'
-import { logger } from '../utils/logger'
-import { PROMPTS } from '../config/prompts'
+import { IProfileRepository } from '../storage/interfaces.js'
+import { ILLMProvider } from '../providers/llm.provider.js'
+import { UserProfile, Message } from '../types/index.js'
+import { ExtractedUserInfo } from '../types/profile.types.js'
+import { logger } from '../utils/logger.js'
+import { PROMPTS } from '../config/prompts.js'
 
 export class ProfileService {
   constructor(

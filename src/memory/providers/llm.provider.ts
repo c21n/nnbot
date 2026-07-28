@@ -1,4 +1,4 @@
-import { ChatMessage, MemoryType } from '../types'
+import { ChatMessage, MemoryType } from '../types/index.js'
 
 export interface LLMSummaryResult {
   text: string

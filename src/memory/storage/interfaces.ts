@@ -1,4 +1,4 @@
-import { Memory, Message, Session, UserProfile, SearchResult, ProfileValue } from '../types'
+import { Memory, Message, Session, UserProfile, SearchResult, ProfileValue } from '../types/index.js'
 
 // Re-export ProfileValue for convenience
 export type { ProfileValue }

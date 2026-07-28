@@ -1,6 +1,6 @@
-import { LLMProvider, LLMSummaryResult } from './llm.provider'
-import { ChatMessage } from '../types'
-import { withRetry } from '../utils/retry'
+import { LLMProvider, LLMSummaryResult } from './llm.provider.js'
+import { ChatMessage } from '../types/index.js'
+import { withRetry } from '../utils/retry.js'
 
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions'
 

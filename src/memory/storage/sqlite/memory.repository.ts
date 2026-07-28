@@ -1,6 +1,6 @@
-import { getSqliteConnection } from './connection'
-import { IMemoryRepository, WhereClause } from '../interfaces'
-import { Memory, MemoryType, SearchResult } from '../../types'
+import { getSqliteConnection } from './connection.js'
+import { IMemoryRepository, WhereClause } from '../interfaces.js'
+import { Memory, MemoryType, SearchResult } from '../../types/index.js'
 
 function rowToMemory(row: Record<string, unknown>): Memory {
   return {

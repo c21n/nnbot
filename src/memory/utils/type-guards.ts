@@ -3,8 +3,8 @@
  * Used to verify interface compliance at runtime
  */
 
-import { Memory, MemoryMetadata, MemoryType, Message, Session, UserProfile } from '../types'
-import { SearchResult } from '../types/search.types'
+import { Memory, MemoryMetadata, MemoryType, Message, Session, UserProfile } from '../types/index.js'
+import { SearchResult } from '../types/search.types.js'
 
 // Memory type guards
 export function isMemory(obj: any): obj is Memory {

@@ -1,2 +1,2 @@
-export { buildPromptWithProtection } from './prompt-protection'
-export { checkOutputSafety } from './output-check'
+export { buildPromptWithProtection } from './prompt-protection.js'
+export { checkOutputSafety } from './output-check.js'

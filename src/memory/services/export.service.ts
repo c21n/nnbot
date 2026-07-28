@@ -1,9 +1,9 @@
-import { IProfileRepository, IMemoryRepository, IMessageRepository } from '../storage/interfaces'
-import { IEmbeddingProvider } from '../providers/embedding.provider'
-import { ExportData, ExportMemory, ExportMessage } from '../types/export.types'
-import { Memory } from '../types'
-import { generateId } from '../utils/id'
-import { logger } from '../utils/logger'
+import { IProfileRepository, IMemoryRepository, IMessageRepository } from '../storage/interfaces.js'
+import { IEmbeddingProvider } from '../providers/embedding.provider.js'
+import { ExportData, ExportMemory, ExportMessage } from '../types/export.types.js'
+import { Memory } from '../types/index.js'
+import { generateId } from '../utils/id.js'
+import { logger } from '../utils/logger.js'
 
 const CURRENT_VERSION = '1.0.0'
 const MAX_MESSAGES = 100

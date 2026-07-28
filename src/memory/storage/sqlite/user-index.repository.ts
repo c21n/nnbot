@@ -1,5 +1,5 @@
-import { getSqliteConnection } from './connection'
-import { IUserIndexRepository } from '../interfaces'
+import { getSqliteConnection } from './connection.js'
+import { IUserIndexRepository } from '../interfaces.js'
 
 export class SqliteUserIndexRepository implements IUserIndexRepository {
   async upsert(userId: string): Promise<void> {

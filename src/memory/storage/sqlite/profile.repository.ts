@@ -1,6 +1,6 @@
-import { getSqliteConnection } from './connection'
-import { IProfileRepository } from '../interfaces'
-import { UserProfile } from '../../types'
+import { getSqliteConnection } from './connection.js'
+import { IProfileRepository } from '../interfaces.js'
+import { UserProfile } from '../../types/index.js'
 
 export class SqliteProfileRepository implements IProfileRepository {
   async save(profile: UserProfile): Promise<void> {

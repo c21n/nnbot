@@ -1,3 +1,3 @@
-export * from './interfaces'
-export * from './sqlite'
-export * from './vectra'
+export * from './interfaces.js'
+export * from './sqlite/index.js'
+export * from './vectra/index.js'

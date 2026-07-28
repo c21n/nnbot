@@ -1,6 +1,6 @@
-import { getSqliteConnection } from './connection'
-import { IMessageRepository } from '../interfaces'
-import { Message } from '../../types'
+import { getSqliteConnection } from './connection.js'
+import { IMessageRepository } from '../interfaces.js'
+import { Message } from '../../types/index.js'
 
 export class SqliteMessageRepository implements IMessageRepository {
   async save(message: Message): Promise<void> {

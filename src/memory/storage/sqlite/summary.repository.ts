@@ -1,5 +1,5 @@
-import { getSqliteConnection } from './connection'
-import { ISummaryRepository } from '../interfaces'
+import { getSqliteConnection } from './connection.js'
+import { ISummaryRepository } from '../interfaces.js'
 
 export class SummaryRepository implements ISummaryRepository {
   async getLastSummarizedIndex(sessionId: string): Promise<number> {

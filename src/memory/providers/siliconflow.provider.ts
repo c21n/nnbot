@@ -1,5 +1,5 @@
-import { EmbeddingProvider } from './embedding.provider'
-import { withRetry } from '../utils/retry'
+import { EmbeddingProvider } from './embedding.provider.js'
+import { withRetry } from '../utils/retry.js'
 
 const SILICONFLOW_API_URL = 'https://api.siliconflow.cn/v1/embeddings'
 

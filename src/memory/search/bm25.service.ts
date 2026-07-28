@@ -5,11 +5,11 @@
  * We sync memory writes to FTS5 and query with tokenized Chinese text.
  */
 
-import { getSqliteConnection } from '../storage/sqlite/connection'
-import { tokenize, tokenizeForFTS5 } from './tokenizer'
-import { BM25Result } from './types'
-import { Memory } from '../types'
-import { logger } from '../utils/logger'
+import { getSqliteConnection } from '../storage/sqlite/connection.js'
+import { tokenize, tokenizeForFTS5 } from './tokenizer.js'
+import { BM25Result } from './types.js'
+import { Memory } from '../types/index.js'
+import { logger } from '../utils/logger.js'
 
 export class BM25Service {
   private initialized = false

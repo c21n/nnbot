@@ -1,4 +1,4 @@
-import { ILock } from './lock.interface'
+import { ILock } from './lock.interface.js'
 
 interface QueueItem {
   resolve: () => void

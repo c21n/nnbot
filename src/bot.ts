@@ -18,12 +18,13 @@ import { logger } from "./core/logger.js";
 import { SQLiteStorage } from "./services/storage/sqlite.js";
 import { OpenAICompatibleService } from "./services/llm/openai.js";
 import { OneBotAdapter } from "./utils/onebot.js";
+import { WeComBotAdapter } from "./channels/wecom/wecom-bot-adapter.js";
 import { configApi } from "./webui/config-api.js";
 import { memoryApi } from "./webui/memory-api.js";
 import { marketplaceApi } from "./marketplace/plugin.js";
 import { toolRegistry } from "./services/tools/index.js";
 import { initMultimodalServices } from "./plugins/multimodal.js";
-import type { PluginServices, AIChatHooks } from "./interfaces.js";
+import type { Event, EventResponder, PluginServices, AIChatHooks } from "./interfaces.js";
 
 const PLUGINS_DIR = resolve(import.meta.dirname, "plugins");
 const WEBUI_DIR = resolve(import.meta.dirname, "webui", "public");
@@ -74,6 +75,8 @@ async function main() {
     }
   }
 
+  const wecom = config.wecom?.enabled ? new WeComBotAdapter(config.wecom) : null;
+
   // Initialize multimodal services
   initMultimodalServices(config, llm, onebot);
   logger.info("Multimodal services initialized");
@@ -109,29 +112,37 @@ async function main() {
   }
 
   // Message buffer for handling multi-part messages
+  const dispatchEvent = async (event: Event, responder: EventResponder): Promise<void> => {
+    const response = await pluginManager.dispatch(event);
+    if (response) {
+      logger.messageOut(event.userId, response.content);
+      await responder(event, response);
+    }
+  };
+
   const messageBuffer = new MessageBuffer(
     config.context.messageBufferDelay ?? 3000,
-    async (userId, nickname, groupId, groupName, combinedMessage, multimodal) => {
-      // Create event and process
-      const event = {
-        type: groupId ? "group_message" : "private_message",
-        userId,
-        nickname,
-        groupId,
-        groupName,
-        message: combinedMessage,
-        timestamp: Date.now(),
-        raw: {},
-        multimodal,
-      };
-
-      const response = await pluginManager.dispatch(event as any);
-      if (response) {
-        logger.messageOut(userId, response.content);
-        await onebot.sendResponse(event as any, response);
-      }
-    }
+    dispatchEvent
   );
+
+  const handleIncomingEvent = async (
+    event: Event,
+    responder: EventResponder
+  ): Promise<void> => {
+    if (!event.message) {
+      return;
+    }
+
+    logger.messageIn(event.userId, event.nickname, event.message, event.groupId ?? undefined);
+
+    // Commands are processed immediately; normal messages use the shared buffer.
+    if (event.message.startsWith("/")) {
+      await dispatchEvent(event, responder);
+      return;
+    }
+
+    messageBuffer.add(event, responder);
+  };
 
   // Create Fastify server
   const app = Fastify({ logger: false });
@@ -154,32 +165,10 @@ async function main() {
     try {
       // Parse event
       const event = onebot.parseEvent(data);
-
-      // Skip empty messages
-      if (!event.message) {
-        return reply.send({ status: "ok" });
-      }
-
-      logger.messageIn(event.userId, event.nickname, event.message, event.groupId ?? undefined);
-
-      // Commands are processed immediately, no buffering
-      if (event.message.startsWith("/")) {
-        const response = await pluginManager.dispatch(event);
-        if (response) {
-          logger.messageOut(event.userId, response.content);
-          await onebot.sendResponse(event, response);
-        }
-      } else {
-        // Other messages are buffered
-        messageBuffer.add(
-          event.userId,
-          event.nickname,
-          event.groupId,
-          event.groupName,
-          event.message,
-          event.multimodal
-        );
-      }
+      const responder: EventResponder = async (replyEvent, response) => {
+        await onebot.sendResponse(replyEvent, response);
+      };
+      await handleIncomingEvent(event, responder);
 
       return reply.send({ status: "ok" });
     } catch (error) {
@@ -192,7 +181,11 @@ async function main() {
   try {
     await app.listen({ port: config.server.port, host: config.server.host });
     logger.info(`Bot is running on ${config.server.host}:${config.server.port}`);
-    logger.info(`Waiting for events from ${config.onebot.url}`);
+    logger.info(`OneBot event endpoint: ${config.server.host}:${config.server.port}/onebot/event`);
+    if (wecom) {
+      wecom.start(handleIncomingEvent);
+      logger.info("Enterprise WeChat smart bot channel enabled");
+    }
   } catch (error) {
     logger.error(`Failed to start server: ${error}`);
     process.exit(1);
@@ -204,6 +197,10 @@ async function main() {
 
     // Stop hot reload
     hotReloadManager.stopWatching();
+
+    if (wecom) {
+      await wecom.stop();
+    }
 
     // Unload plugins
     for (const plugin of pluginManager.getPlugins()) {

@@ -1,8 +1,8 @@
-import { IProfileRepository, IMemoryRepository } from '../storage/interfaces'
-import { ILLMProvider } from '../providers/llm.provider'
-import { UserProfile, Memory } from '../types'
-import { logger } from '../utils/logger'
-import { PROMPTS } from '../config/prompts'
+import { IProfileRepository, IMemoryRepository } from '../storage/interfaces.js'
+import { ILLMProvider } from '../providers/llm.provider.js'
+import { UserProfile, Memory } from '../types/index.js'
+import { logger } from '../utils/logger.js'
+import { PROMPTS } from '../config/prompts.js'
 
 // Max memories to include in summary
 const MAX_MEMORIES = 10

@@ -1,9 +1,9 @@
-import { getVectraIndex } from './connection'
-import { IMemoryRepository, WhereClause } from '../interfaces'
-import { Memory, MemoryMetadata, MemoryType } from '../../types'
-import { SearchResult } from '../../types/search.types'
-import { BM25Service } from '../../search/bm25.service'
-import { logger } from '../../utils/logger'
+import { getVectraIndex } from './connection.js'
+import { IMemoryRepository, WhereClause } from '../interfaces.js'
+import { Memory, MemoryMetadata, MemoryType } from '../../types/index.js'
+import { SearchResult } from '../../types/search.types.js'
+import { BM25Service } from '../../search/bm25.service.js'
+import { logger } from '../../utils/logger.js'
 
 // Flatten MemoryMetadata into vectra-compatible Record
 function flattenMetadata(memory: Memory): Record<string, string | number | boolean> {

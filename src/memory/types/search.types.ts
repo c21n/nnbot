@@ -1,4 +1,4 @@
-import { MemoryMetadata } from './memory.types'
+import { MemoryMetadata } from './memory.types.js'
 
 export interface SearchResult {
   id: string

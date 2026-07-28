@@ -1,10 +1,10 @@
-import { IMemoryRepository } from '../storage/interfaces'
-import { IEmbeddingProvider } from '../providers/embedding.provider'
-import { BM25Service } from '../search/bm25.service'
-import { rrfFusion, toRankedResults } from '../search/rrf'
-import { LRUCache } from '../cache/lru.cache'
-import { SearchResult, SearchOptions } from '../types/search.types'
-import { config } from '../config'
+import { IMemoryRepository } from '../storage/interfaces.js'
+import { IEmbeddingProvider } from '../providers/embedding.provider.js'
+import { BM25Service } from '../search/bm25.service.js'
+import { rrfFusion, toRankedResults } from '../search/rrf.js'
+import { LRUCache } from '../cache/lru.cache.js'
+import { SearchResult, SearchOptions } from '../types/search.types.js'
+import { config } from '../config/index.js'
 
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 const CACHE_KEY_SEPARATOR = '\x00'

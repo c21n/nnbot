@@ -1,5 +1,5 @@
 import dotenv from 'dotenv'
-import { AppConfig } from './types'
+import { AppConfig } from './types.js'
 
 dotenv.config()
 
@@ -35,4 +35,4 @@ export const config: AppConfig = {
   }
 }
 
-export * from './types'
+export * from './types.js'

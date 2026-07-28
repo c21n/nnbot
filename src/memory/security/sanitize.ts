@@ -1,4 +1,4 @@
-import { UserProfile } from '../types'
+import { UserProfile } from '../types/index.js'
 
 const SENSITIVE_KEYS = /api[_\s]?key|password|secret|token|phone|email|birthday/i
 const MAX_STRING_LENGTH = 200

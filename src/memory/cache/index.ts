@@ -1,1 +1,1 @@
-export { LRUCache } from './lru.cache'
+export { LRUCache } from './lru.cache.js'

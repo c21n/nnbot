@@ -46,6 +46,9 @@ export interface Response {
   readonly extra?: Record<string, unknown>;
 }
 
+/** Sends a response through the channel that received the event. */
+export type EventResponder = (event: Event, response: Response) => Promise<void>;
+
 // ============ Plugin Interface ============
 
 /**
@@ -382,6 +385,17 @@ export interface OneBotConfig {
   accessToken?: string;
 }
 
+/** Enterprise WeChat smart bot long-connection configuration. */
+export interface WeComBotConfig {
+  enabled: boolean;
+  websocketUrl: string;
+  botId: string;
+  secret: string;
+  reconnectDelayMs?: number;
+  heartbeatIntervalMs?: number;
+  commandTimeoutMs?: number;
+}
+
 /**
  * Single LLM provider configuration
  */
@@ -538,6 +552,7 @@ export interface MultimodalConfig {
 export interface Config {
   server: ServerConfig;
   onebot: OneBotConfig;
+  wecom?: WeComBotConfig;
   llm: LLMConfig;
   storage: StorageConfig;
   plugins: PluginConfig;

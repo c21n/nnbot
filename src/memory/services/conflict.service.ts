@@ -1,7 +1,7 @@
-import { IMemoryRepository } from '../storage/interfaces'
-import { Memory, MemoryMetadata } from '../types'
-import { generateId } from '../utils/id'
-import { logger } from '../utils/logger'
+import { IMemoryRepository } from '../storage/interfaces.js'
+import { Memory, MemoryMetadata } from '../types/index.js'
+import { generateId } from '../utils/id.js'
+import { logger } from '../utils/logger.js'
 
 export class MemoryConflictService {
   constructor(private memoryRepo: IMemoryRepository) {}

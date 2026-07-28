@@ -76,7 +76,23 @@ function resolveEnvRefs(config: Config): Config {
     };
   }
 
-  return { ...config, llm: { ...config.llm, providers: llmProviders }, providers, memory, tools };
+  const resolvedWecom = config.wecom
+    ? {
+        ...config.wecom,
+        botId: resolve(config.wecom.botId),
+        secret: "",
+        secretConfigured: Boolean(resolve(config.wecom.secret)),
+      }
+    : undefined;
+
+  return {
+    ...config,
+    llm: { ...config.llm, providers: llmProviders },
+    providers,
+    memory,
+    tools,
+    ...(resolvedWecom ? { wecom: resolvedWecom } : {}),
+  };
 }
 
 /**
@@ -146,7 +162,35 @@ function extractApiKeys(config: Config): { keys: Record<string, string>; clean: 
     };
   }
 
-  return { keys, clean: { ...config, llm: { ...config.llm, providers: llmProviders }, providers, memory, tools } };
+  let wecom = config.wecom;
+  if (wecom) {
+    const { secretConfigured: _secretConfigured, ...wecomInput } = config.wecom as NonNullable<Config["wecom"]> & {
+      secretConfigured?: boolean;
+    };
+    wecom = { ...wecomInput };
+
+    if (wecom.botId && !wecom.botId.startsWith("${")) {
+      keys.WECOM_BOT_ID = wecom.botId;
+      wecom.botId = "${WECOM_BOT_ID}";
+    }
+
+    if (wecom.secret && !wecom.secret.startsWith("${")) {
+      keys.WECOM_BOT_SECRET = wecom.secret;
+      wecom.secret = "${WECOM_BOT_SECRET}";
+    }
+  }
+
+  return {
+    keys,
+    clean: {
+      ...config,
+      llm: { ...config.llm, providers: llmProviders },
+      providers,
+      memory,
+      tools,
+      wecom,
+    },
+  };
 }
 
 // ── Routes ──
@@ -197,8 +241,24 @@ export async function configApi(app: FastifyInstance): Promise<void> {
         return reply.status(400).send(fail("Missing required config sections"));
       }
 
-      // Extract API keys → .env, replace with ${VAR} refs
-      const { keys, clean } = extractApiKeys(config);
+      // Preserve masked Enterprise WeChat secrets when the WebUI leaves them blank.
+      const storedConfig = existsSync(CONFIG_PATH)
+        ? parseYaml(readFileSync(CONFIG_PATH, "utf-8")) as Config
+        : undefined;
+      const storedWecom = storedConfig?.wecom;
+      const configToSave = config.wecom && storedWecom
+        ? {
+            ...config,
+            wecom: {
+              ...config.wecom,
+              botId: config.wecom.botId || storedWecom.botId,
+              secret: config.wecom.secret || storedWecom.secret,
+            },
+          }
+        : config;
+
+      // Extract API keys to .env, replace with ${VAR} refs.
+      const { keys, clean } = extractApiKeys(configToSave);
 
       if (Object.keys(keys).length > 0) {
         writeEnvVars(keys);

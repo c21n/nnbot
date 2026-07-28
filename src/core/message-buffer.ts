@@ -1,132 +1,88 @@
 /**
  * Message Buffer
  *
- * Buffers messages from the same user and processes them together
- * after a delay, to handle users who send multiple messages in quick succession.
+ * Buffers messages from the same channel and conversation, then dispatches
+ * the combined event through the responder that belongs to that channel.
  */
 
-import { logger } from "./logger.js";
+import type { Event, EventResponder } from "../interfaces.js";
 import type { IMultimodalMessage, IMultimodalContent } from "../multimodal/types/multimodal.types.js";
+import { logger } from "./logger.js";
 
 interface BufferedMessage {
-  userId: string;
-  nickname: string;
-  groupId: string | null;
-  groupName: string | null;
+  event: Event;
   messages: string[];
   multimodalContents: IMultimodalContent[];
+  responder: EventResponder;
   timer: ReturnType<typeof setTimeout>;
 }
 
 export class MessageBuffer {
-  private buffers: Map<string, BufferedMessage> = new Map();
-  private delay: number;
-  private onFlush: (
-    userId: string,
-    nickname: string,
-    groupId: string | null,
-    groupName: string | null,
-    combinedMessage: string,
-    multimodal?: IMultimodalMessage
-  ) => Promise<void>;
+  private readonly buffers = new Map<string, BufferedMessage>();
+  private readonly delay: number;
+  private readonly onFlush: (event: Event, responder: EventResponder) => Promise<void>;
 
   constructor(
     delay: number = 1000,
-    onFlush: (
-      userId: string,
-      nickname: string,
-      groupId: string | null,
-      groupName: string | null,
-      combinedMessage: string,
-      multimodal?: IMultimodalMessage
-    ) => Promise<void>
+    onFlush: (event: Event, responder: EventResponder) => Promise<void>
   ) {
     this.delay = delay;
     this.onFlush = onFlush;
   }
 
-  /**
-   * Add message to buffer
-   */
-  add(
-    userId: string,
-    nickname: string,
-    groupId: string | null,
-    groupName: string | null,
-    message: string,
-    multimodal?: IMultimodalMessage
-  ): void {
-    const key = groupId ? `group:${groupId}:${userId}` : `private:${userId}`;
+  /** Add an event to the buffer for its channel and conversation. */
+  add(event: Event, responder: EventResponder): void {
+    const channel = typeof event.raw.channel === "string" ? event.raw.channel : "default";
+    const key = event.groupId
+      ? `${channel}:group:${event.groupId}:${event.userId}`
+      : `${channel}:private:${event.userId}`;
 
-    // If there's an existing buffer, append message and reset timer
-    if (this.buffers.has(key)) {
-      const buffer = this.buffers.get(key)!;
-      buffer.messages.push(message);
-      if (multimodal?.contents) {
-        buffer.multimodalContents.push(...multimodal.contents);
+    const existing = this.buffers.get(key);
+    if (existing) {
+      existing.messages.push(event.message);
+      if (event.multimodal?.contents) {
+        existing.multimodalContents.push(...event.multimodal.contents);
       }
-      clearTimeout(buffer.timer);
-      buffer.timer = setTimeout(() => this.flush(key), this.delay);
-      logger.debug(`[Buffer] ${userId} 追加消息，当前 ${buffer.messages.length} 条`);
+      clearTimeout(existing.timer);
+      existing.timer = setTimeout(() => void this.flush(key), this.delay);
+      logger.debug(`[Buffer] appended message for ${event.userId}; total=${existing.messages.length}`);
       return;
     }
 
-    // Create new buffer
-    const timer = setTimeout(() => this.flush(key), this.delay);
+    const timer = setTimeout(() => void this.flush(key), this.delay);
     this.buffers.set(key, {
-      userId,
-      nickname,
-      groupId,
-      groupName,
-      messages: [message],
-      multimodalContents: multimodal?.contents ? [...multimodal.contents] : [],
+      event,
+      messages: [event.message],
+      multimodalContents: event.multimodal?.contents ? [...event.multimodal.contents] : [],
+      responder,
       timer,
     });
-    logger.debug(`[Buffer] ${userId} 新建缓冲`);
+    logger.debug(`[Buffer] created buffer for ${event.userId}`);
   }
 
-  /**
-   * Flush buffer and process messages
-   */
   private async flush(key: string): Promise<void> {
     const buffer = this.buffers.get(key);
     if (!buffer) {
       return;
     }
 
-    // Remove from map
     this.buffers.delete(key);
-
-    // Combine messages
     const combinedMessage = buffer.messages.join("\n");
+    const multimodal: IMultimodalMessage | undefined = buffer.multimodalContents.length > 0
+      ? { contents: buffer.multimodalContents, text: combinedMessage }
+      : undefined;
 
-    // Build multimodal message if there are multimodal contents
-    let multimodal: IMultimodalMessage | undefined;
-    if (buffer.multimodalContents.length > 0) {
-      multimodal = {
-        contents: buffer.multimodalContents,
-        text: combinedMessage,
-      };
-    }
+    const event: Event = {
+      ...buffer.event,
+      message: combinedMessage,
+      timestamp: Date.now(),
+      multimodal,
+    };
 
-    logger.info(
-      `[Buffer] ${buffer.nickname}(${buffer.userId}) 合并 ${buffer.messages.length} 条消息`
-    );
-
-    // Process
-    await this.onFlush(
-      buffer.userId,
-      buffer.nickname,
-      buffer.groupId,
-      buffer.groupName,
-      combinedMessage,
-      multimodal
-    );
+    logger.info(`[Buffer] flushed ${buffer.messages.length} messages for ${event.userId}`);
+    await this.onFlush(event, buffer.responder);
   }
 
-  /**
-   * Get current buffer status
-   */
   getStatus(): { pending: number; buffers: string[] } {
     return {
       pending: this.buffers.size,

@@ -1,2 +1,2 @@
-export { VectraMemoryRepository } from './memory.repository'
-export { getVectraIndex, closeVectra } from './connection'
+export { VectraMemoryRepository } from './memory.repository.js'
+export { getVectraIndex, closeVectra } from './connection.js'

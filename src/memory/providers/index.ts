@@ -1,4 +1,4 @@
-export type { IEmbeddingProvider, EmbeddingProvider } from './embedding.provider'
-export { SiliconFlowEmbedding } from './siliconflow.provider'
-export type { ILLMProvider, LLMProvider, LLMSummaryResult } from './llm.provider'
-export { DeepSeekLLM } from './deepseek.provider'
+export type { IEmbeddingProvider, EmbeddingProvider } from './embedding.provider.js'
+export { SiliconFlowEmbedding } from './siliconflow.provider.js'
+export type { ILLMProvider, LLMProvider, LLMSummaryResult } from './llm.provider.js'
+export { DeepSeekLLM } from './deepseek.provider.js'
