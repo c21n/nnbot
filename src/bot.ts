@@ -159,10 +159,11 @@ async function main() {
     return { status: "ok", uptime: process.uptime() };
   });
 
-  app.get("/api/system/logs", async (request) => {
+  app.get("/api/system/logs", async (request, reply) => {
     const query = request.query as { limit?: string };
     const parsedLimit = Number.parseInt(query.limit ?? "100", 10);
     const limit = Number.isFinite(parsedLimit) ? parsedLimit : 100;
+    reply.header("Cache-Control", "no-store, no-cache, must-revalidate");
     return { success: true, data: logger.getRecentLogs(limit) };
   });
 

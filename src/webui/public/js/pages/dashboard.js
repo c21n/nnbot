@@ -4,6 +4,7 @@ import { esc } from '../utils.js';
 
 let healthInterval = null;
 let logInterval = null;
+let logLoading = false;
 
 export function initDashboard() {
   destroyDashboard();
@@ -84,11 +85,16 @@ async function loadRecentUsers() {
 async function loadLogs() {
   const container = document.getElementById('system-logs');
   if (!container) return;
+  if (logLoading) return;
+
+  logLoading = true;
+  const statusEl = document.getElementById('logs-refresh-status');
 
   try {
     const logs = await API.getLogs(100);
     if (logs.length === 0) {
       container.innerHTML = '<div class="empty-state"><p>暂无运行日志</p></div>';
+      if (statusEl) statusEl.textContent = `已更新 ${formatLogTime(new Date().toISOString())}`;
       return;
     }
 
@@ -99,8 +105,12 @@ async function loadLogs() {
         <span class="log-message">${esc(log.message)}</span>
       </div>
     `).join('');
+    if (statusEl) statusEl.textContent = `已更新 ${formatLogTime(new Date().toISOString())}`;
   } catch {
     container.innerHTML = '<div class="empty-state"><p>日志暂时无法加载</p></div>';
+    if (statusEl) statusEl.textContent = '刷新失败';
+  } finally {
+    logLoading = false;
   }
 }
 

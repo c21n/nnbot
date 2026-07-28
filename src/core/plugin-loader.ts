@@ -16,6 +16,10 @@ import type {
 import { PLUGIN_PRIORITY } from "../constants.js";
 import { logger } from "./logger.js";
 
+function normalizePluginId(value: string): string {
+  return value.replace(/-/g, "_");
+}
+
 /**
  * Plugin loader implementation
  * Scans directories and dynamically imports plugin files
@@ -39,13 +43,14 @@ export class PluginLoader implements IPluginLoader {
     const files = await readdir(dir);
 
     // Filter valid plugin files
-    const enabled = new Set(services.config.plugins.enabled);
-    const disabled = new Set(services.config.plugins.disabled);
+    const enabled = new Set(services.config.plugins.enabled.map(normalizePluginId));
+    const disabled = new Set(services.config.plugins.disabled.map(normalizePluginId));
     const pluginFiles = files
       .filter((file) => this.isValidPluginFile(file))
       .filter((file) => {
         const name = basename(file, extname(file));
-        return enabled.has(name) && !disabled.has(name);
+        const pluginId = normalizePluginId(name);
+        return enabled.has(pluginId) && !disabled.has(pluginId);
       });
 
     // Load each plugin

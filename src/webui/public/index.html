@@ -157,7 +157,10 @@
               <div class="card-title">运行日志</div>
               <div class="card-description">最近 100 条服务日志，每 5 秒自动刷新</div>
             </div>
-            <button id="logs-refresh" class="btn btn-secondary btn-sm">立即刷新</button>
+            <div style="display:flex;align-items:center;gap:var(--space-3)">
+              <span id="logs-refresh-status" class="form-hint">等待首次刷新</span>
+              <button id="logs-refresh" class="btn btn-secondary btn-sm">立即刷新</button>
+            </div>
           </div>
           <div id="system-logs" class="system-logs">
             <div class="loading-overlay"><div class="spinner"></div></div>

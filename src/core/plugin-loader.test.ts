@@ -43,4 +43,25 @@ describe("PluginLoader", () => {
       await rm(dir, { recursive: true, force: true });
     }
   });
+
+  it("matches hyphenated plugin files with underscored config names", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "nnbot-plugin-loader-"));
+
+    try {
+      await writeFile(
+        join(dir, "ai-chat.js"),
+        "export default { name: 'ai_chat', handle: async () => null };\n",
+        "utf8"
+      );
+
+      const plugins = await new PluginLoader().loadFromDir(
+        dir,
+        mockServices(["ai_chat"])
+      );
+
+      expect(plugins.map((plugin) => plugin.name)).toEqual(["ai_chat"]);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
 });
