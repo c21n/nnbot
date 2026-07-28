@@ -6,7 +6,7 @@
 
 import axios, { type AxiosInstance } from "axios";
 import type { Event, Response, OneBotConfig, EventType } from "../interfaces.js";
-import type { IMultimodalMessage, IMultimodalContent, IOneBotSegment } from "../multimodal/types/multimodal.types.js";
+import type { IMultimodalMessage, IMultimodalContent } from "../multimodal/types/multimodal.types.js";
 
 export class OneBotAdapter {
   private client: AxiosInstance;
@@ -203,7 +203,7 @@ export class OneBotAdapter {
    */
   async testConnection(): Promise<boolean> {
     try {
-      await this.client.get("/get_login_info");
+      await this.client.post("/get_login_info", {});
       return true;
     } catch {
       return false;
@@ -251,7 +251,7 @@ export class OneBotAdapter {
    * Get bot's login info
    */
   async getLoginInfo(): Promise<{ userId: string; nickname: string }> {
-    const response = await this.client.get("/get_login_info");
+    const response = await this.client.post("/get_login_info", {});
     const data = response.data.data ?? response.data;
     return {
       userId: String(data.user_id),

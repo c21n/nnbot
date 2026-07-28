@@ -132,7 +132,10 @@ export default createPlugin({
       // Capture user message for afterLLM
       const userMsg = messages.find((m) => m.role === "user");
       if (userMsg) {
-        lastUserMessage.set(event.userId, userMsg.content);
+        lastUserMessage.set(
+          event.userId,
+          typeof userMsg.content === "string" ? userMsg.content : event.message
+        );
       }
 
       try {

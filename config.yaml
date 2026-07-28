@@ -52,7 +52,7 @@ plugins:
   disabled: []
 admin:
   userIds:
-    - "2310410026"
+    - "YOUR_QQ_USER_ID"
   commands:
     - /help
     - /plugins

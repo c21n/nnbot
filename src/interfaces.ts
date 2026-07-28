@@ -55,6 +55,7 @@ export interface IPlugin {
   readonly name: string;
   readonly version: string;
   readonly description: string;
+  readonly priority: number;
 
   /**
    * Called when the plugin is loaded

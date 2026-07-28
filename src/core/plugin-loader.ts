@@ -39,7 +39,14 @@ export class PluginLoader implements IPluginLoader {
     const files = await readdir(dir);
 
     // Filter valid plugin files
-    const pluginFiles = files.filter((file) => this.isValidPluginFile(file));
+    const enabled = new Set(services.config.plugins.enabled);
+    const disabled = new Set(services.config.plugins.disabled);
+    const pluginFiles = files
+      .filter((file) => this.isValidPluginFile(file))
+      .filter((file) => {
+        const name = basename(file, extname(file));
+        return enabled.has(name) && !disabled.has(name);
+      });
 
     // Load each plugin
     const plugins: IPlugin[] = [];
@@ -150,11 +157,8 @@ export class PluginLoader implements IPluginLoader {
    * Compare plugins by priority, then by name
    */
   private comparePlugins(a: IPlugin, b: IPlugin): number {
-    // Access priority from internal property (set by createPlugin)
-    const pa = (a as unknown as Record<string, unknown>).priority as number ??
-      PLUGIN_PRIORITY.DEFAULT;
-    const pb = (b as unknown as Record<string, unknown>).priority as number ??
-      PLUGIN_PRIORITY.DEFAULT;
+    const pa = a.priority ?? PLUGIN_PRIORITY.DEFAULT;
+    const pb = b.priority ?? PLUGIN_PRIORITY.DEFAULT;
 
     if (pa !== pb) {
       return pa - pb; // priority ascending

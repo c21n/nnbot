@@ -6,7 +6,6 @@
  */
 
 import type { OneBotAdapter } from "../../utils/onebot.js";
-import type { Config } from "../../interfaces.js";
 import type {
   IMultimodalProcessor,
   IMultimodalMessage,
@@ -16,7 +15,6 @@ import type {
   SupportedAudioMimeType,
 } from "../types/multimodal.types.js";
 import type { ISTTService } from "../types/stt.types.js";
-import type { IVisionLLMService } from "../types/vision.types.js";
 import { sttServiceFactory } from "./stt-factory.js";
 import { VisionLLMAdapter } from "./vision-llm-adapter.js";
 
@@ -49,17 +47,15 @@ export class MultimodalProcessor implements IMultimodalProcessor {
   private onebotAdapter: OneBotAdapter;
   private config: MultimodalProcessorConfig;
   private sttService?: ISTTService;
-  private visionAdapter?: VisionLLMAdapter;
   private maxFileSize: number;
 
   constructor(
     onebotAdapter: OneBotAdapter,
     config: MultimodalProcessorConfig,
-    visionAdapter?: VisionLLMAdapter
+    _visionAdapter?: VisionLLMAdapter
   ) {
     this.onebotAdapter = onebotAdapter;
     this.config = config;
-    this.visionAdapter = visionAdapter;
     this.maxFileSize = this.parseFileSize(config.storage.maxFileSize);
 
     // Initialize STT service if enabled
@@ -117,7 +113,7 @@ export class MultimodalProcessor implements IMultimodalProcessor {
   /**
    * Convert image to base64
    */
-  imageToBase64(imageData: Buffer, mimeType: SupportedImageMimeType): string {
+  imageToBase64(imageData: Buffer, _mimeType: SupportedImageMimeType): string {
     return imageData.toString('base64');
   }
 

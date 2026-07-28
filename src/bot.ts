@@ -24,7 +24,6 @@ import { marketplaceApi } from "./marketplace/plugin.js";
 import { toolRegistry } from "./services/tools/index.js";
 import { initMultimodalServices } from "./plugins/multimodal.js";
 import type { PluginServices, AIChatHooks } from "./interfaces.js";
-import type { IMultimodalMessage } from "./multimodal/types/multimodal.types.js";
 
 const PLUGINS_DIR = resolve(import.meta.dirname, "plugins");
 const WEBUI_DIR = resolve(import.meta.dirname, "webui", "public");
@@ -63,12 +62,17 @@ async function main() {
   // Test OneBot connection
   const connected = await onebot.testConnection();
   if (!connected) {
-    logger.error(`Failed to connect to OneBot: ${config.onebot.url}`);
-    process.exit(1);
+    logger.warn(
+      `OneBot is unavailable at ${config.onebot.url}; starting without OneBot message capabilities`
+    );
+  } else {
+    try {
+      const loginInfo = await onebot.getLoginInfo();
+      logger.info(`Connected to OneBot as ${loginInfo.nickname} (${loginInfo.userId})`);
+    } catch (error) {
+      logger.warn(`OneBot connection changed before login info was read: ${error}`);
+    }
   }
-
-  const loginInfo = await onebot.getLoginInfo();
-  logger.info(`Connected to OneBot as ${loginInfo.nickname} (${loginInfo.userId})`);
 
   // Initialize multimodal services
   initMultimodalServices(config, llm, onebot);

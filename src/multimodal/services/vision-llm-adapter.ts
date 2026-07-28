@@ -6,7 +6,7 @@
  */
 
 import type { ILLMService, LLMMessage, LLMChatOptions } from "../../interfaces.js";
-import type { IMultimodalContent, SupportedImageMimeType } from "../types/multimodal.types.js";
+import type { IMultimodalContent } from "../types/multimodal.types.js";
 import type { IVisionLLMService, IVisionMessage, VisionContentPart } from "../types/vision.types.js";
 
 export class VisionLLMAdapter implements IVisionLLMService {

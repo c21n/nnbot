@@ -335,7 +335,7 @@ multimodal:
 ```yaml
 # OneBot 连接
 onebot:
-  url: "ws://127.0.0.1:3000"
+  url: "http://127.0.0.1:3000"
   accessToken: ""  # 可选
 
 # LLM 配置（支持多 provider）

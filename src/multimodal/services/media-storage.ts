@@ -99,7 +99,7 @@ export class MediaStorageService implements IMediaStorageService {
   /**
    * Get media metadata by ID
    */
-  async getMetadata(id: string): Promise<IMediaMetadata | null> {
+  async getMetadata(_id: string): Promise<IMediaMetadata | null> {
     // TODO: Implement metadata storage (e.g., SQLite)
     // For now, return null
     return null;

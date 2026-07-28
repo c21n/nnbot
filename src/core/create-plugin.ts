@@ -40,6 +40,7 @@ export function createPlugin(def: PluginDefinition): IPlugin {
     name: def.name,
     description: def.description ?? "",
     version: def.version ?? "1.0.0",
+    priority: def.priority ?? 100,
 
     /**
      * Set services (called by PluginManager before onLoad/handle)

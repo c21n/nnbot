@@ -6,9 +6,8 @@
  */
 
 import { createPlugin } from "../core/create-plugin.js";
-import type { Event, Response, PluginServices, AIChatHooks, LLMMessage } from "../interfaces.js";
+import type { Event, LLMMessage } from "../interfaces.js";
 import type { IMultimodalMessage, IMultimodalContent } from "../multimodal/types/multimodal.types.js";
-import { MultimodalProcessor } from "../multimodal/services/multimodal-processor.js";
 import { VisionLLMAdapter } from "../multimodal/services/vision-llm-adapter.js";
 import { MediaStorageService } from "../multimodal/services/media-storage.js";
 
@@ -72,6 +71,7 @@ export default createPlugin({
             ...updatedMessages[lastUserIdx],
             content: `${originalContent}\n\n[语音转写]: ${voiceTexts.join("\n")}`,
           };
+          return updatedMessages;
         }
       }
 
@@ -94,7 +94,7 @@ export default createPlugin({
   /**
    * Handle multimodal events (optional - can be handled via hooks only)
    */
-  async handle(event: Event, services: PluginServices): Promise<Response | null> {
+  async handle(): Promise<null> {
     // This plugin primarily works via hooks
     // Return null to let other plugins handle the event
     return null;
@@ -167,7 +167,7 @@ async function processVoiceContent(
 /**
  * Check if vision is supported for this event
  */
-async function checkVisionSupport(event: Event): Promise<boolean> {
+async function checkVisionSupport(_event: Event): Promise<boolean> {
   // Check if vision is enabled in config
   const config = getConfig();
   if (!config?.multimodal?.vision?.enabled) {
@@ -285,7 +285,7 @@ function getMediaStorageService(): any {
 export async function initMultimodalServices(
   config: any,
   llmService: any,
-  onebotAdapter: any
+  _onebotAdapter: any
 ): Promise<void> {
   globalConfig = config;
 
