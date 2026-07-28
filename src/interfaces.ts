@@ -396,6 +396,14 @@ export interface WeComBotConfig {
   commandTimeoutMs?: number;
 }
 
+/** Internal AI Workbench API connection configuration. */
+export interface WorkbenchConfig {
+  enabled: boolean;
+  baseUrl: string;
+  accessToken?: string;
+  timeoutMs?: number;
+}
+
 /**
  * Single LLM provider configuration
  */
@@ -553,6 +561,7 @@ export interface Config {
   server: ServerConfig;
   onebot: OneBotConfig;
   wecom?: WeComBotConfig;
+  workbench?: WorkbenchConfig;
   llm: LLMConfig;
   storage: StorageConfig;
   plugins: PluginConfig;

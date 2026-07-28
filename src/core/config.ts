@@ -95,6 +95,7 @@ export class ConfigManager {
       admin: { ...defaults.admin, ...overrides.admin },
       context: { ...defaults.context, ...overrides.context },
       wecom: overrides.wecom ?? defaults.wecom,
+      workbench: overrides.workbench ?? defaults.workbench,
       tools: overrides.tools,
       providers: overrides.providers ?? defaults.providers,
       memory: overrides.memory ?? defaults.memory,
@@ -200,6 +201,14 @@ export class ConfigManager {
               ...config.wecom,
               botId: substitute(config.wecom.botId) as string,
               secret: substitute(config.wecom.secret) as string,
+            },
+          }
+        : {}),
+      ...(config.workbench
+        ? {
+            workbench: {
+              ...config.workbench,
+              accessToken: substitute(config.workbench.accessToken) as string | undefined,
             },
           }
         : {}),

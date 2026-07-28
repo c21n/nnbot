@@ -11,6 +11,10 @@ wecom:
 storage:
   type: sqlite
   path: data/bot.db
+workbench:
+  enabled: true
+  baseUrl: http://127.0.0.1:4177
+  timeoutMs: 30000
 context:
   historyLimit: 10
 llm:
@@ -54,6 +58,7 @@ plugins:
     - rule_match
     - admin
     - tools
+    - workbench
   disabled: []
 admin:
   userIds:
