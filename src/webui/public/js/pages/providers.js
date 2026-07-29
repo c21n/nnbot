@@ -474,6 +474,9 @@ async function testConnection(index) {
   const apiKey = card.querySelector('[data-field="apiKey"]')?.value?.trim();
   const type = card.querySelector('[data-field="type"]')?.value || 'openai';
   const model = card.querySelector('[data-field="defaultModel"]')?.value?.trim();
+  const provider = config?.providers?.list?.[index];
+  const modelConfig = provider?.models?.find(item => item.id === model);
+  const purpose = modelConfig?.purpose === 'embedding' ? 'embedding' : 'llm';
   const statusEl = document.getElementById(`test-status-${index}`);
   const btnEl = document.getElementById(`test-btn-${index}`);
 
@@ -496,7 +499,7 @@ async function testConnection(index) {
   }
 
   try {
-    const result = await API.testProvider({ baseUrl, apiKey, type, model });
+    const result = await API.testProvider({ baseUrl, apiKey, type, model, purpose });
     if (statusEl) {
       statusEl.textContent = `✓ 连接成功 · ${result.latencyMs} ms · ${result.preview}`;
       statusEl.style.color = 'var(--color-success, #16a34a)';

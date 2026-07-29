@@ -11,7 +11,7 @@ describe("provider connection test API", () => {
 
   beforeEach(async () => {
     upstream = createServer((request, response) => {
-      if (request.url !== "/v1/chat/completions" || request.method !== "POST") {
+      if (!["/v1/chat/completions", "/v1/embeddings"].includes(request.url ?? "") || request.method !== "POST") {
         response.writeHead(404);
         response.end();
         return;
@@ -32,6 +32,14 @@ describe("provider connection test API", () => {
         }
 
         response.writeHead(200, { "Content-Type": "application/json" });
+        if (request.url === "/v1/embeddings") {
+          response.end(JSON.stringify({
+            model: payload.model,
+            data: [{ embedding: [0.1, 0.2, 0.3] }],
+          }));
+          return;
+        }
+
         response.end(JSON.stringify({
           model: payload.model,
           choices: [{ message: { content: payload.messages?.[0]?.content ? "OK" : "" } }],
@@ -93,5 +101,25 @@ describe("provider connection test API", () => {
     expect(body.success).toBe(false);
     expect(body.error).toContain("HTTP 401");
     expect(body.error).not.toContain("wrong-key");
+  });
+
+  it("tests embedding providers through the embeddings endpoint", async () => {
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/providers/test",
+      payload: {
+        baseUrl: `${upstreamUrl}/v1`,
+        apiKey: "test-key",
+        model: "BAAI/bge-m3",
+        purpose: "embedding",
+        type: "openai",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      success: true,
+      data: { model: "BAAI/bge-m3", preview: "向量接口正常 · 3 维" },
+    });
   });
 });

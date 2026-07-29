@@ -199,6 +199,7 @@ type ProviderTestRequest = {
   apiKey?: string;
   type?: "openai" | "ollama";
   model?: string;
+  purpose?: "llm" | "embedding";
 };
 
 function normalizeProviderTestUrl(baseUrl: string, type: "openai" | "ollama"): string {
@@ -224,6 +225,13 @@ function normalizeProviderTestUrl(baseUrl: string, type: "openai" | "ollama"): s
 
 function getStringValue(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function getEmbeddingPreview(data: Array<{ embedding?: unknown }> | undefined): string | undefined {
+  const embedding = data?.[0]?.embedding;
+  return Array.isArray(embedding) && embedding.length > 0
+    ? `向量接口正常 · ${embedding.length} 维`
+    : undefined;
 }
 
 function getProviderTestError(error: unknown): string {
@@ -459,6 +467,7 @@ export async function configApi(app: FastifyInstance): Promise<void> {
     const baseUrl = body.baseUrl?.trim() ?? "";
     const model = body.model?.trim() ?? "";
     const apiKey = body.apiKey?.trim() ?? "";
+    const purpose = body.purpose === "embedding" ? "embedding" : "llm";
 
     if (!baseUrl) {
       return reply.status(400).send(fail("请填写 Base URL"));
@@ -485,21 +494,30 @@ export async function configApi(app: FastifyInstance): Promise<void> {
         },
         timeout: 15000,
       });
-      const response = await client.post("/chat/completions", {
-        model,
-        messages: [{ role: "user", content: "Reply with OK only." }],
-        temperature: 0,
-        max_tokens: 8,
-      });
+      const response = purpose === "embedding"
+        ? await client.post("/embeddings", { model, input: "connection test" })
+        : await client.post("/chat/completions", {
+            model,
+            messages: [{ role: "user", content: "Reply with OK only." }],
+            temperature: 0,
+            max_tokens: 8,
+          });
 
       const responseData = response.data as {
         model?: unknown;
+        data?: Array<{ embedding?: unknown }>;
         choices?: Array<{ message?: { content?: unknown } }>;
       };
-      const preview = getStringValue(responseData.choices?.[0]?.message?.content);
+      const preview = purpose === "embedding"
+        ? getEmbeddingPreview(responseData.data)
+        : getStringValue(responseData.choices?.[0]?.message?.content);
 
       if (!preview) {
-        return reply.send(fail("模型接口已响应，但没有返回文本"));
+        return reply.send(fail(
+          purpose === "embedding"
+            ? "嵌入接口已响应，但没有返回向量"
+            : "模型接口已响应，但没有返回文本",
+        ));
       }
 
       return reply.send(ok({
