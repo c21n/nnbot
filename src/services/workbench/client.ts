@@ -30,6 +30,20 @@ export interface PerformanceRankingResponse {
   readonly rows: readonly Record<string, unknown>[];
 }
 
+export interface WorkbenchCapability {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string;
+  readonly endpoint: string;
+  readonly readOnly: boolean;
+}
+
+export interface WorkbenchCapabilitiesResponse {
+  readonly version: number;
+  readonly readOnly: boolean;
+  readonly capabilities: readonly WorkbenchCapability[];
+}
+
 export interface PerformanceRankingImage {
   readonly base64: string;
   readonly md5: string;
@@ -80,6 +94,10 @@ export class WorkbenchApiClient {
       method: "POST",
       body: JSON.stringify({ companyProfile, filters }),
     });
+  }
+
+  getCapabilities(): Promise<WorkbenchCapabilitiesResponse> {
+    return this.request<WorkbenchCapabilitiesResponse>("/api/assistant/capabilities");
   }
 
   getPerformanceRankings(

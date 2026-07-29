@@ -1,10 +1,31 @@
 import { describe, expect, it, vi } from "vitest";
-import { WorkbenchKnowledgeTool, WorkbenchPerformanceTool } from "./workbench.js";
+import {
+  WorkbenchCapabilitiesTool,
+  WorkbenchKnowledgeTool,
+  WorkbenchPerformanceTool,
+} from "./workbench.js";
 import type { ToolContext } from "../types.js";
 
 const context = {} as ToolContext;
 
 describe("Workbench tools", () => {
+  it("returns the live capability catalog", async () => {
+    const client = {
+      getCapabilities: vi.fn().mockResolvedValue({
+        version: 1,
+        readOnly: true,
+        capabilities: [{ id: "knowledge_search", name: "知识库检索" }],
+      }),
+    };
+    const tool = new WorkbenchCapabilitiesTool(client as never);
+
+    const result = await tool.execute({}, context);
+
+    expect(result.success).toBe(true);
+    expect(result.content).toContain("knowledge_search");
+    expect(client.getCapabilities).toHaveBeenCalledOnce();
+  });
+
   it("returns knowledge evidence as model-readable JSON", async () => {
     const client = {
       searchKnowledge: vi.fn().mockResolvedValue({

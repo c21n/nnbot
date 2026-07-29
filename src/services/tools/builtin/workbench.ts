@@ -19,6 +19,27 @@ const companyProfileProperties: Record<string, ToolParameter> = {
   smallMediumEnterprise: { type: "boolean", description: "是否为中小企业。", optional: true },
 };
 
+export class WorkbenchCapabilitiesTool implements ITool {
+  readonly name = "workbench_capabilities";
+  readonly description = "查询当前智能业务工作台通过 API 提供的可用能力。用户询问机器人能做什么、支持什么或能否执行某项工作时必须先调用。";
+  readonly parameters: Record<string, ToolParameter> = {};
+  readonly active = true;
+
+  constructor(private readonly client: WorkbenchApiClient) {}
+
+  async execute(_args: Record<string, unknown>, _context: ToolContext): Promise<ToolResult> {
+    try {
+      const result = await this.client.getCapabilities();
+      return success(JSON.stringify(result, null, 2), {
+        capabilityCount: result.capabilities.length,
+        readOnly: result.readOnly,
+      });
+    } catch (error) {
+      return workbenchFailure(error);
+    }
+  }
+}
+
 export class WorkbenchKnowledgeTool implements ITool {
   readonly name = "workbench_knowledge_search";
   readonly description = "检索智能业务工作台知识库中的公司制度、业务流程、政策、项目和专利资料。返回证据供主 Agent 组织回答。";

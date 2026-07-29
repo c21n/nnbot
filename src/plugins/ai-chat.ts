@@ -165,8 +165,10 @@ class AIChatPluginImpl {
 
       if (activeTools.length > 0) {
         // Use tool loop
-        const requireToolCall = activeTools.length === 1
-          && activeTools[0].name === "workbench_performance_ranking";
+        const requireToolCall = activeTools.some((tool) => (
+          tool.name === "workbench_capabilities"
+          || tool.name === "workbench_performance_ranking"
+        ));
         logger.plugin("ai_chat", `工具调用已启用: ${activeTools.map((t) => t.name).join(", ")}`);
 
         const toolContext: ToolContext = {

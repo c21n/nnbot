@@ -18,7 +18,6 @@ import { ok, fail } from "./utils/response.js";
 import { readEnvFile, writeEnvVars } from "./utils/env-file.js";
 
 const CONFIG_PATH = "config.yaml";
-const PERSONA_PATH = "persona.yaml";
 
 // ── Helpers ──
 
@@ -513,53 +512,8 @@ export async function configApi(app: FastifyInstance): Promise<void> {
     }
   });
 
-  /**
-   * GET /api/persona — Read current persona config
-   */
-  app.get("/api/persona", async (_request, reply) => {
-    try {
-      if (!existsSync(PERSONA_PATH)) {
-        return reply.send(ok({ default: "", users: {} }));
-      }
-
-      const content = readFileSync(PERSONA_PATH, "utf-8");
-      const config = parseYaml(content) as { default?: string; users?: Record<string, string> };
-
-      return reply.send(ok({
-        default: config.default || "",
-        users: config.users || {},
-      }));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return reply.status(500).send(fail(message));
-    }
-  });
-
-  /**
-   * PUT /api/persona — Save persona config to file
-   */
-  app.put("/api/persona", async (request, reply) => {
-    try {
-      const { default: defaultPersona, users } = request.body as {
-        default?: string;
-        users?: Record<string, string>;
-      };
-
-      const config: Record<string, unknown> = {};
-      if (defaultPersona) {
-        config.default = defaultPersona;
-      }
-      if (users && Object.keys(users).length > 0) {
-        config.users = users;
-      }
-
-      const yaml = stringifyYaml(config, { indent: 2 });
-      writeFileSync(PERSONA_PATH, yaml, "utf-8");
-
-      return reply.send(ok(undefined));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return reply.status(500).send(fail(message));
-    }
-  });
+  /** Persona customization is intentionally disabled for the fixed workbench policy. */
+  app.all("/api/persona", async (_request, reply) => (
+    reply.status(404).send(fail("自定义人格已关闭，机器人使用统一系统提示词。"))
+  ));
 }

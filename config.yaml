@@ -68,9 +68,6 @@ admin:
     - /plugins
     - /status
     - /clear
-    - /persona
-    - /persona-set
-    - /persona-reset
 rules: []
 memory:
   enabled: true

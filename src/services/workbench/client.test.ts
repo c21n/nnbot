@@ -30,6 +30,31 @@ describe("WorkbenchApiClient", () => {
     expect(headers.get("Accept")).toBe("application/json");
   });
 
+  it("reads the current workbench capability catalog", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({
+        version: 1,
+        readOnly: true,
+        capabilities: [],
+      }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new WorkbenchApiClient({
+      enabled: true,
+      baseUrl: "http://127.0.0.1:4177/",
+    });
+
+    await expect(client.getCapabilities()).resolves.toMatchObject({
+      version: 1,
+      readOnly: true,
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:4177/api/assistant/capabilities",
+      expect.objectContaining({ headers: expect.any(Headers) }),
+    );
+  });
+
   it("downloads a ranking image and converts it to a channel attachment", async () => {
     vi.stubGlobal(
       "fetch",

@@ -9,6 +9,7 @@ import { createPlugin } from "../core/create-plugin.js";
 import { logger } from "../core/logger.js";
 import { WorkbenchApiClient } from "../services/workbench/client.js";
 import {
+  WorkbenchCapabilitiesTool,
   WorkbenchKnowledgeTool,
   WorkbenchPerformanceTool,
   WorkbenchPolicyMatchTool,
@@ -30,6 +31,17 @@ export default createPlugin({
 
     const client = new WorkbenchApiClient(config);
     const factories: IToolFactory[] = [
+      {
+        name: "workbench_capabilities",
+        description: "查询工作台当前可用的只读能力",
+        tags: ["workbench", "capabilities", "discovery"],
+        keywords: [
+          "能做什么", "可以做什么", "支持什么", "支持哪些", "有什么功能", "有哪些功能",
+          "有哪些工具", "具备什么能力", "你能做", "功能清单", "能力清单", "能不能查", "能否查",
+          "能不能导出", "能否导出", "能查", "可以查", "能查询", "可以查询", "能导出", "可以导出", "能匹配", "可以匹配",
+        ],
+        create: () => new WorkbenchCapabilitiesTool(client),
+      },
       {
         name: "workbench_knowledge_search",
         description: "检索智能业务工作台知识库",

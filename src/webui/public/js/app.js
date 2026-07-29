@@ -4,7 +4,6 @@ import API from './api.js';
 import toast from './toast.js';
 import { initDashboard, destroyDashboard } from './pages/dashboard.js';
 import { initProviders, updateProvidersConfig, collectProviders, collectDefaults } from './pages/providers.js';
-import { initPersona, collectPersona } from './pages/persona.js';
 import { initMemory, collectMemory } from './pages/memory.js';
 import { initMemoryData } from './pages/memory-data.js';
 import { initPlugins, collectPlugins } from './pages/plugins.js';
@@ -15,7 +14,6 @@ import { initSettings, renderSettings, collectSettings } from './pages/settings.
 
 // ── Global State ──
 let config = {};
-let persona = { default: '', users: {} };
 
 // Make config accessible globally for memory page
 window._config = config;
@@ -121,10 +119,6 @@ function registerRoutes() {
     initProviders(config);
   });
 
-  router.register('persona', () => {
-    initPersona(persona);
-  });
-
   router.register('memory', () => {
     initMemory(config);
   });
@@ -164,19 +158,14 @@ function registerRoutes() {
 // ── Load Config ──
 async function loadConfig() {
   try {
-    const [configData, personaData] = await Promise.all([
-      API.getConfig(),
-      API.getPersona(),
-    ]);
+    const configData = await API.getConfig();
 
     config = configData;
-    persona = personaData;
     window._config = config;
 
     // Render current page
     const page = router.getCurrentPage();
     if (page === 'providers') initProviders(config);
-    else if (page === 'persona') initPersona(persona);
     else if (page === 'memory') initMemory(config);
     else if (page === 'plugins') initPlugins(config);
     else if (page === 'rules') initRules(config);
@@ -216,7 +205,6 @@ async function saveConfig() {
     const rules = collectRules();
     const memory = collectMemory();
     const search = collectSearch();
-    const personaData = collectPersona();
 
     // Only update providers if there are provider cards on the page
     const hasProviderCards = document.querySelectorAll('.provider-card').length > 0;
@@ -239,11 +227,9 @@ async function saveConfig() {
 
     await Promise.all([
       API.saveConfig(newConfig),
-      API.savePersona(personaData),
     ]);
 
     config = newConfig;
-    persona = personaData;
     window._config = config;
 
     toast.success('配置已保存');

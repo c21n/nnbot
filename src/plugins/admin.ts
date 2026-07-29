@@ -11,7 +11,6 @@ import type {
   IConversationStorage,
   PluginServices,
 } from "../interfaces.js";
-import { PersonaService } from "../services/persona.js";
 import { createPlugin } from "../core/create-plugin.js";
 import { PLUGIN_PRIORITY } from "../constants.js";
 import { logger } from "../core/logger.js";
@@ -27,7 +26,6 @@ class AdminPluginImpl {
   readonly priority = PLUGIN_PRIORITY.ADMIN;
 
   private commands!: Map<string, (event: Event, args: string) => Promise<string>>;
-  private personaService!: PersonaService | null;
   private conversationStorage!: IConversationStorage | null;
   private services!: PluginServices;
 
@@ -36,7 +34,6 @@ class AdminPluginImpl {
    */
   async initialize(services: PluginServices): Promise<void> {
     this.services = services;
-    this.personaService = new PersonaService(services.storage);
     this.conversationStorage = services.storage;
 
     this.commands = new Map([
@@ -44,9 +41,6 @@ class AdminPluginImpl {
       ["/plugins", this.cmdPlugins.bind(this)],
       ["/status", this.cmdStatus.bind(this)],
       ["/clear", this.cmdClear.bind(this)],
-      ["/persona", this.cmdPersona.bind(this)],
-      ["/persona-set", this.cmdPersonaSet.bind(this)],
-      ["/persona-reset", this.cmdPersonaReset.bind(this)],
       ["/reload", this.cmdReload.bind(this)],
     ]);
   }
@@ -108,9 +102,6 @@ class AdminPluginImpl {
 /plugins - 列出所有插件
 /status - 显示 Bot 状态
 /clear - 清除对话历史
-/persona - 查看当前人格设定
-/persona-set <内容> - 设置人格（用 "|||" 分隔多条）
-/persona-reset - 重置为默认人格
 /reload [插件名] - 重载插件（无参数重载全部）`;
   }
 
@@ -159,44 +150,6 @@ class AdminPluginImpl {
 
     await this.conversationStorage.clearHistory(event.userId);
     return "对话历史已清除";
-  }
-
-  private async cmdPersona(event: Event): Promise<string> {
-    if (!this.personaService) {
-      return "人格服务未初始化";
-    }
-
-    const persona = await this.personaService.getPersona(event.userId);
-    const source = persona === this.personaService.getDefaultPersona()
-      ? "(来自 persona.yaml)"
-      : "(用户自定义)";
-
-    return `当前人格设定 ${source}:\n\n${persona}`;
-  }
-
-  private async cmdPersonaSet(event: Event, args: string): Promise<string> {
-    if (!this.personaService) {
-      return "人格服务未初始化";
-    }
-
-    if (!args) {
-      return "用法: /persona-set <人格内容>\n\n示例:\n/persona-set 你是一个幽默的助手，喜欢开玩笑。|||回答要简洁有趣。";
-    }
-
-    // Support multiple lines with ||| separator
-    const persona = args.replace(/\|\|\|/g, "\n");
-
-    await this.personaService.setUserPersona(event.userId, persona);
-    return `人格设定已更新！\n\n新设定:\n${persona}`;
-  }
-
-  private async cmdPersonaReset(event: Event): Promise<string> {
-    if (!this.personaService) {
-      return "人格服务未初始化";
-    }
-
-    await this.personaService.resetUserPersona(event.userId);
-    return "人格已重置为默认设定";
   }
 
   private async cmdReload(_event: Event, args: string): Promise<string> {
