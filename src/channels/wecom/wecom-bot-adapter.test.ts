@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { EventType } from "../../interfaces.js";
 import {
+  createWeComImageReply,
   createWeComMarkdownReply,
   createWeComStreamReply,
   parseWeComMessage,
@@ -54,6 +55,17 @@ describe("Enterprise WeChat protocol helpers", () => {
       body: {
         msgtype: "markdown",
         markdown: { content: "**已完成**" },
+      },
+    });
+  });
+
+  it("builds a media reply with the uploaded media id", () => {
+    expect(createWeComImageReply("request-1", "media-1")).toEqual({
+      cmd: "aibot_respond_msg",
+      headers: { req_id: "request-1" },
+      body: {
+        msgtype: "image",
+        image: { media_id: "media-1" },
       },
     });
   });

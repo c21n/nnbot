@@ -6,7 +6,7 @@
  * shape used by the existing OneBot channel.
  */
 
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import WebSocket, { type RawData } from "ws";
 import { logger } from "../../core/logger.js";
 import type { Event, EventResponder, Response, WeComBotConfig } from "../../interfaces.js";
@@ -17,6 +17,8 @@ const DEFAULT_HEARTBEAT_INTERVAL_MS = 30_000;
 const DEFAULT_COMMAND_TIMEOUT_MS = 10_000;
 const MESSAGE_DEDUPE_TTL_MS = 10 * 60 * 1_000;
 const MAX_DEDUPE_ENTRIES = 2_000;
+const MEDIA_CHUNK_SIZE = 512 * 1024;
+const MAX_MEDIA_CHUNKS = 100;
 
 export interface WeComEnvelope {
   readonly cmd?: string;
@@ -39,6 +41,7 @@ export interface WeComCommand {
 export interface WeComReplyImage {
   readonly base64: string;
   readonly md5: string;
+  readonly fileName?: string;
 }
 
 export type WeComEventHandler = (event: Event, responder: EventResponder) => Promise<void>;
@@ -66,7 +69,7 @@ function readResponseImages(response: Response): WeComReplyImage[] {
   }
 
   return rawAttachments
-    .filter((attachment): attachment is { type: "image"; base64: string; md5: string } => {
+    .filter((attachment): attachment is { type: "image"; base64: string; md5: string; fileName?: string } => {
       if (!attachment || typeof attachment !== "object") return false;
       const item = attachment as Record<string, unknown>;
       return item.type === "image"
@@ -76,7 +79,11 @@ function readResponseImages(response: Response): WeComReplyImage[] {
         && item.md5.length > 0;
     })
     .slice(0, 2)
-    .map((attachment) => ({ base64: attachment.base64, md5: attachment.md5 }));
+    .map((attachment) => ({
+      base64: attachment.base64,
+      md5: attachment.md5,
+      fileName: typeof attachment.fileName === "string" ? attachment.fileName : undefined,
+    }));
 }
 
 function stripRobotMention(content: string): string {
@@ -195,6 +202,17 @@ export function createWeComMixedReply(
   };
 }
 
+export function createWeComImageReply(requestId: string, mediaId: string): WeComCommand {
+  return {
+    cmd: "aibot_respond_msg",
+    headers: { req_id: requestId },
+    body: {
+      msgtype: "image",
+      image: { media_id: mediaId },
+    },
+  };
+}
+
 export class WeComBotAdapter {
   private readonly config: WeComBotConfig;
   private socket: WebSocket | null = null;
@@ -245,14 +263,89 @@ export class WeComBotAdapter {
     const streamId = readString(event.raw.wecom_stream_id);
     const images = readResponseImages(response);
     logger.info(`[WeCom] Sending response: stream=${streamId ? "yes" : "no"}, images=${images.length}`);
-    const command = streamId
-      ? createWeComStreamReply(requestId, streamId, response.content, true, images)
-      : images.length > 0
-        ? createWeComMixedReply(requestId, response.content, images)
-        : createWeComMarkdownReply(requestId, response.content);
-    const result = await this.sendCommand(command);
+    const result = await this.sendCommand(
+      streamId
+        ? createWeComStreamReply(requestId, streamId, response.content, true)
+        : createWeComMarkdownReply(requestId, response.content),
+    );
+    this.assertCommandSucceeded(result, "Enterprise WeChat text reply");
+
+    if (images.length > 0) {
+      await this.sendMediaImages(requestId, images);
+    }
+  }
+
+  private async sendMediaImages(requestId: string, images: readonly WeComReplyImage[]): Promise<void> {
+    for (const image of images) {
+      const mediaId = await this.uploadImage(image);
+      const result = await this.sendCommand(createWeComImageReply(requestId, mediaId));
+      this.assertCommandSucceeded(result, "Enterprise WeChat image reply");
+      logger.info(`[WeCom] Image media reply accepted: mediaId=${mediaId.slice(0, 8)}...`);
+    }
+  }
+
+  private async uploadImage(image: WeComReplyImage): Promise<string> {
+    const buffer = Buffer.from(image.base64, "base64");
+    if (buffer.length === 0) {
+      throw new Error("Enterprise WeChat image attachment is empty");
+    }
+
+    const totalChunks = Math.ceil(buffer.length / MEDIA_CHUNK_SIZE);
+    if (totalChunks > MAX_MEDIA_CHUNKS) {
+      throw new Error(`Enterprise WeChat image is too large: ${buffer.length} bytes`);
+    }
+
+    const md5 = createHash("md5").update(buffer).digest("hex");
+    const initResult = await this.sendCommand({
+      cmd: "aibot_upload_media_init",
+      headers: { req_id: randomUUID() },
+      body: {
+        type: "image",
+        filename: image.fileName || "performance-ranking.png",
+        total_size: buffer.length,
+        total_chunks: totalChunks,
+        md5,
+      },
+    });
+    this.assertCommandSucceeded(initResult, "Enterprise WeChat image upload init");
+
+    const uploadId = asRecord(initResult.body)?.upload_id;
+    if (typeof uploadId !== "string" || uploadId.length === 0) {
+      throw new Error("Enterprise WeChat image upload did not return upload_id");
+    }
+
+    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex += 1) {
+      const start = chunkIndex * MEDIA_CHUNK_SIZE;
+      const chunk = buffer.subarray(start, Math.min(start + MEDIA_CHUNK_SIZE, buffer.length));
+      const chunkResult = await this.sendCommand({
+        cmd: "aibot_upload_media_chunk",
+        headers: { req_id: randomUUID() },
+        body: {
+          upload_id: uploadId,
+          chunk_index: chunkIndex,
+          base64_data: chunk.toString("base64"),
+        },
+      });
+      this.assertCommandSucceeded(chunkResult, `Enterprise WeChat image upload chunk ${chunkIndex + 1}`);
+    }
+
+    const finishResult = await this.sendCommand({
+      cmd: "aibot_upload_media_finish",
+      headers: { req_id: randomUUID() },
+      body: { upload_id: uploadId },
+    });
+    this.assertCommandSucceeded(finishResult, "Enterprise WeChat image upload finish");
+
+    const mediaId = asRecord(finishResult.body)?.media_id;
+    if (typeof mediaId !== "string" || mediaId.length === 0) {
+      throw new Error("Enterprise WeChat image upload did not return media_id");
+    }
+    return mediaId;
+  }
+
+  private assertCommandSucceeded(result: WeComEnvelope, action: string): void {
     if (result.errcode !== 0) {
-      throw new Error(`Enterprise WeChat reply failed: ${result.errmsg ?? result.errcode}`);
+      throw new Error(`${action} failed: ${result.errmsg ?? result.errcode ?? "unknown error"}`);
     }
   }
 
