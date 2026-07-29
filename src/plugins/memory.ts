@@ -16,6 +16,7 @@ import {
   getSqliteConnection,
   SqliteMessageRepository,
   SqliteSessionRepository,
+  SqliteMemoryRepository,
   SqliteProfileRepository,
   SummaryRepository,
   SqliteUserIndexRepository,
@@ -27,7 +28,6 @@ import {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let plugin: any = null;
 let isEnabled = false;
-const lastUserMessage = new Map<string, string>();
 
 function buildSessionId(event: Event): string {
   const date = new Date(event.timestamp).toISOString().slice(0, 10);
@@ -76,7 +76,8 @@ export default createPlugin({
       const userIndexRepo = new SqliteUserIndexRepository();
 
       const bm25Service = new BM25Service();
-      const memoryRepo = new VectraMemoryRepository(bm25Service);
+      const sqliteMemoryRepo = new SqliteMemoryRepository();
+      const memoryRepo = new VectraMemoryRepository(bm25Service, sqliteMemoryRepo);
 
       // Get providers from ProviderManager
       // Plugin can override via memory.embedding.providerId / memory.llm.providerId
@@ -101,7 +102,13 @@ export default createPlugin({
         llmProvider,
         lock,
         bm25Service,
+        searchConfig: memoryConfig.search,
       });
+
+      const synced = await memoryRepo.syncMetadataMirror();
+      if (synced > 0) {
+        logger.info(`[Memory] Synchronized ${synced} vector memories to SQLite metadata`);
+      }
 
       await plugin.initialize();
       isEnabled = true;
@@ -117,7 +124,6 @@ export default createPlugin({
       await plugin.shutdown();
       plugin = null;
       isEnabled = false;
-      lastUserMessage.clear();
     }
   },
 
@@ -129,21 +135,14 @@ export default createPlugin({
 
       const sessionId = buildSessionId(event);
 
-      // Capture user message for afterLLM
-      const userMsg = messages.find((m) => m.role === "user");
-      if (userMsg) {
-        lastUserMessage.set(
-          event.userId,
-          typeof userMsg.content === "string" ? userMsg.content : event.message
-        );
-      }
-
       try {
         const result = await plugin.beforeChat({
           userId: event.userId,
           sessionId,
           userMessage: event.message,
           systemPrompt: messages.find((m) => m.role === "system")?.content ?? "",
+          platform: typeof event.raw.channel === "string" ? event.raw.channel : "unknown",
+          groupId: event.groupId,
         });
 
         return messages.map((m) =>
@@ -161,13 +160,12 @@ export default createPlugin({
       }
 
       const sessionId = buildSessionId(event);
-      const userMessage = lastUserMessage.get(event.userId) ?? event.message;
 
       // Fire-and-forget: don't block the response
       plugin.afterChat({
         userId: event.userId,
         sessionId,
-        userMessage,
+        userMessage: event.message,
         assistantMessage: response,
       }).catch((error: unknown) => {
         logger.error(`[Memory] afterChat failed: ${error}`);

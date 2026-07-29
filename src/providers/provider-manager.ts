@@ -134,7 +134,7 @@ export class ProviderManager {
   private getDefaultModel(config: ProviderConfig, purpose: 'llm' | 'embedding'): string {
     // Check defaults config
     const defaultConfig = this.defaults[purpose]
-    if (defaultConfig && defaultConfig.providerId === config.id) {
+    if (defaultConfig?.providerId === config.id && defaultConfig.modelId) {
       return defaultConfig.modelId
     }
 

@@ -23,11 +23,22 @@ export class BM25Service {
     const db = getSqliteConnection()
 
     try {
+      const existingSchema = db
+        .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'")
+        .get() as { sql?: string } | undefined
+
+      // Older builds used an external-content FTS table. Its manual delete
+      // and rebuild operations can corrupt the index, so migrate it to a
+      // standalone table that owns its searchable rows.
+      if (existingSchema?.sql && /content\s*=\s*['\"]memories['\"]/i.test(existingSchema.sql)) {
+        db.exec("DROP TABLE memories_fts")
+      }
+
       db.exec(`
         CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(
+          memory_id UNINDEXED,
+          user_id UNINDEXED,
           text,
-          content='memories',
-          content_rowid='rowid',
           tokenize='unicode61'
         )
       `)
@@ -58,16 +69,16 @@ export class BM25Service {
       db.exec("DELETE FROM memories_fts")
 
       const memories = db.prepare(
-        "SELECT rowid, id, text FROM memories"
-      ).all() as { rowid: number; id: string; text: string }[]
+        "SELECT id, user_id, text FROM memories"
+      ).all() as { id: string; user_id: string; text: string }[]
 
       const insert = db.prepare(
-        "INSERT INTO memories_fts(rowid, text) VALUES (?, ?)"
+        "INSERT INTO memories_fts(memory_id, user_id, text) VALUES (?, ?, ?)"
       )
 
-      const insertMany = db.transaction((rows: { rowid: number; text: string }[]) => {
+      const insertMany = db.transaction((rows: { id: string; user_id: string; text: string }[]) => {
         for (const row of rows) {
-          insert.run(row.rowid, tokenizeForFTS5(row.text))
+          insert.run(row.id, row.user_id, tokenizeForFTS5(row.text))
         }
       })
 
@@ -101,11 +112,10 @@ export class BM25Service {
 
     try {
       const rows = db.prepare(`
-        SELECT m.id, bm25(memories_fts) as rank
+        SELECT memory_id as id, bm25(memories_fts) as rank
         FROM memories_fts
-        JOIN memories m ON m.rowid = memories_fts.rowid
         WHERE memories_fts MATCH ?
-          AND m.user_id = ?
+          AND user_id = ?
         ORDER BY rank
         LIMIT ?
       `).all(ftsQuery, userId, limit) as { id: string; rank: number }[]
@@ -129,16 +139,14 @@ export class BM25Service {
     const db = getSqliteConnection()
 
     try {
-      // Get the rowid from memories table
-      const row = db.prepare(
-        "SELECT rowid FROM memories WHERE id = ?"
-      ).get(memory.id) as { rowid: number } | undefined
-
-      if (!row) return
+      // Replace an existing FTS row when a memory is re-saved.
+      db.prepare(
+        "DELETE FROM memories_fts WHERE memory_id = ?"
+      ).run(memory.id)
 
       db.prepare(
-        "INSERT INTO memories_fts(rowid, text) VALUES (?, ?)"
-      ).run(row.rowid, tokenizeForFTS5(memory.text))
+        "INSERT INTO memories_fts(memory_id, user_id, text) VALUES (?, ?, ?)"
+      ).run(memory.id, memory.metadata.user_id, tokenizeForFTS5(memory.text))
     } catch (error) {
       logger.warn(`[BM25] Sync save failed: ${error}`)
     }
@@ -153,20 +161,14 @@ export class BM25Service {
     const db = getSqliteConnection()
 
     try {
-      const row = db.prepare(
-        "SELECT rowid FROM memories WHERE id = ?"
-      ).get(id) as { rowid: number } | undefined
-
-      if (!row) return
-
       // Delete old and insert new
       db.prepare(
-        "DELETE FROM memories_fts WHERE rowid = ?"
-      ).run(row.rowid)
+        "DELETE FROM memories_fts WHERE memory_id = ?"
+      ).run(id)
 
       db.prepare(
-        "INSERT INTO memories_fts(rowid, text) VALUES (?, ?)"
-      ).run(row.rowid, tokenizeForFTS5(memory.text))
+        "INSERT INTO memories_fts(memory_id, user_id, text) VALUES (?, ?, ?)"
+      ).run(id, memory.metadata.user_id, tokenizeForFTS5(memory.text))
     } catch (error) {
       logger.warn(`[BM25] Sync update failed: ${error}`)
     }
@@ -181,15 +183,9 @@ export class BM25Service {
     const db = getSqliteConnection()
 
     try {
-      const row = db.prepare(
-        "SELECT rowid FROM memories WHERE id = ?"
-      ).get(id) as { rowid: number } | undefined
-
-      if (!row) return
-
       db.prepare(
-        "DELETE FROM memories_fts WHERE rowid = ?"
-      ).run(row.rowid)
+        "DELETE FROM memories_fts WHERE memory_id = ?"
+      ).run(id)
     } catch (error) {
       logger.warn(`[BM25] Sync delete failed: ${error}`)
     }

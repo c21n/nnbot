@@ -21,8 +21,8 @@ export interface ProviderConfig {
 }
 
 export interface ProvidersDefaults {
-  llm?: { providerId: string; modelId: string }
-  embedding?: { providerId: string; modelId: string; dimension?: number }
+  llm?: { providerId: string; modelId?: string }
+  embedding?: { providerId: string; modelId?: string; dimension?: number }
 }
 
 export interface ProvidersConfig {

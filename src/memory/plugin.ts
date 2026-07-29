@@ -16,6 +16,7 @@ import { ILock } from './lock/lock.interface.js'
 import { generateId } from './utils/id.js'
 import { logger } from './utils/logger.js'
 import { ExportData } from './types/index.js'
+import { config as defaultMemoryConfig } from './config/index.js'
 
 export interface MemoryPluginConfig {
   messageRepo: IMessageRepository
@@ -28,6 +29,7 @@ export interface MemoryPluginConfig {
   llmProvider: ILLMProvider
   lock: ILock
   bm25Service?: BM25Service
+  searchConfig?: Partial<Pick<typeof defaultMemoryConfig.search, 'maxMemories' | 'minScore'>>
 }
 
 export class MemoryPlugin {
@@ -40,6 +42,7 @@ export class MemoryPlugin {
   private memorySummaryService: MemorySummaryService
   private messageRepo: IMessageRepository
   private memoryRepo: IMemoryRepository
+  private sessionRepo: ISessionRepository
   private userIndexRepo?: IUserIndexRepository
   private sessionMessageCounts = new Map<string, number>()
   private profileUpdateFrequency: number
@@ -48,6 +51,7 @@ export class MemoryPlugin {
   constructor(config: MemoryPluginConfig, lifecycleConfig?: { profileUpdateFrequency?: number }) {
     this.messageRepo = config.messageRepo
     this.memoryRepo = config.memoryRepo
+    this.sessionRepo = config.sessionRepo
     this.userIndexRepo = config.userIndexRepo
     this.lock = config.lock
     this.profileUpdateFrequency = lifecycleConfig?.profileUpdateFrequency ?? 3
@@ -55,7 +59,12 @@ export class MemoryPlugin {
     this.searchService = new SearchService(
       config.memoryRepo,
       config.embeddingProvider,
-      config.bm25Service ?? new BM25Service()
+      config.bm25Service ?? new BM25Service(),
+      100,
+      {
+        ...defaultMemoryConfig.search,
+        ...config.searchConfig,
+      }
     )
 
     this.summaryService = new SummaryService(
@@ -120,8 +129,21 @@ export class MemoryPlugin {
     sessionId: string
     userMessage: string
     systemPrompt: string
+    platform?: string
+    groupId?: string
   }): Promise<{ systemPrompt: string; userMessage: string }> {
     const { userId, sessionId, userMessage, systemPrompt } = params
+
+    const now = Date.now()
+    const existingSession = await this.sessionRepo.findById(sessionId)
+    await this.sessionRepo.save({
+      id: sessionId,
+      user_id: userId,
+      platform: params.platform ?? 'unknown',
+      group_id: params.groupId,
+      created_at: existingSession?.created_at ?? now,
+      last_active_at: now,
+    })
 
     // 1. Update user index
     if (this.userIndexRepo) {
@@ -194,7 +216,11 @@ export class MemoryPlugin {
       })
 
       // 2. Check if summary should be generated
-      await this.summaryService.checkAndGenerateSummary(userId, sessionId)
+      const summaryCreated = await this.summaryService.checkAndGenerateSummary(userId, sessionId)
+      if (summaryCreated) {
+        // A new summary changes retrieval results; do not serve an old cache.
+        this.searchService.clearCache()
+      }
 
       // 3. Update profile at configured frequency
       const count = (this.sessionMessageCounts.get(sessionId) ?? 0) + 1

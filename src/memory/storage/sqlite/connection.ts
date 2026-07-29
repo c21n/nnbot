@@ -9,7 +9,9 @@ export function getSqliteConnection(): Database.Database {
   if (db) return db
 
   // 确保目录存在
-  const dbPath = config.sqlite.path
+  // The bot plugin applies the WebUI-selected path at runtime. Read the
+  // environment override here instead of only during module initialization.
+  const dbPath = process.env.SQLITE_PATH || config.sqlite.path
   mkdirSync(dirname(dbPath), { recursive: true })
 
   db = new Database(dbPath)

@@ -5,6 +5,7 @@ import { rrfFusion, toRankedResults } from '../search/rrf.js'
 import { LRUCache } from '../cache/lru.cache.js'
 import { SearchResult, SearchOptions } from '../types/search.types.js'
 import { config } from '../config/index.js'
+import { SearchConfig } from '../config/types.js'
 
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 const CACHE_KEY_SEPARATOR = '\x00'
@@ -17,7 +18,8 @@ export class SearchService {
     private memoryRepo: IMemoryRepository,
     private embeddingProvider: IEmbeddingProvider,
     private bm25Service: BM25Service,
-    cacheMaxSize = 100
+    cacheMaxSize = 100,
+    private searchConfig: SearchConfig = config.search,
   ) {
     this.cache = new LRUCache<string, SearchResult[]>(cacheMaxSize, CACHE_TTL)
   }
@@ -26,7 +28,7 @@ export class SearchService {
     query: string,
     userId: string,
     sessionId: string,
-    options: SearchOptions = { limit: config.search.maxMemories }
+    options: SearchOptions = { limit: this.searchConfig.maxMemories }
   ): Promise<SearchResult[]> {
     // 1. Check cache
     const cacheKey = this.buildCacheKey(userId, query, options)
@@ -52,6 +54,9 @@ export class SearchService {
         r.metadata.timestamp >= start && r.metadata.timestamp <= end
       )
     }
+
+    // Drop weak matches after all retrieval signals have been fused.
+    filteredResults = filteredResults.filter(r => r.score >= this.searchConfig.minScore)
 
     // 5. Sort by score and truncate
     const sortedResults = filteredResults
@@ -91,7 +96,7 @@ export class SearchService {
   /**
    * BM25 keyword search via FTS5
    */
-  private bm25Search(
+  private async bm25Search(
     query: string,
     userId: string,
     options: SearchOptions
@@ -99,26 +104,25 @@ export class SearchService {
     try {
       const bm25Results = this.bm25Service.search(userId, query, options.limit * 3)
 
-      // BM25 results don't have full memory data, so we need to fetch from repo
-      // For now, return minimal SearchResult with just id and score
-      // The rrfScore method will merge with vector results that have full data
-      return Promise.resolve(
-        bm25Results.map(r => ({
-          id: r.id,
-          text: '', // Will be filled from vector results or by findById
-          score: 0, // Will be replaced by RRF score
-          metadata: {
-            user_id: userId,
-            session_id: '',
-            platform: '',
-            type: 'context' as const,
-            importance: 0,
-            timestamp: 0,
-          },
-        }))
+      // BM25 returns IDs only. Hydrate every result so keyword-only matches
+      // still provide real memory text and metadata to the prompt.
+      const hydrated = await Promise.all(
+        bm25Results.map(async result => {
+          const memory = await this.memoryRepo.findById(result.id)
+          if (!memory) return null
+
+          return {
+            id: memory.id,
+            text: memory.text,
+            score: result.score,
+            metadata: memory.metadata,
+          }
+        })
       )
+
+      return hydrated.filter((result): result is SearchResult => result !== null)
     } catch (error) {
-      return Promise.resolve([])
+      return []
     }
   }
 
@@ -130,7 +134,7 @@ export class SearchService {
     bm25Results: SearchResult[],
     now: number
   ): SearchResult[] {
-    const { rrf: rrfWeight, importance: importanceWeight, time: timeWeight } = config.search.weights
+    const { rrf: rrfWeight, importance: importanceWeight, time: timeWeight } = this.searchConfig.weights
 
     // Build ranked lists for RRF
     const vectorRanking = toRankedResults(vectorResults.map(r => r.id))
@@ -201,7 +205,8 @@ export class SearchService {
       query,
       String(options.limit),
       String(options.includeOtherSessions ?? false),
-      options.timeRange ? `${options.timeRange.start}-${options.timeRange.end}` : ''
+      options.timeRange ? `${options.timeRange.start}-${options.timeRange.end}` : '',
+      String(this.searchConfig.minScore),
     ].join(CACHE_KEY_SEPARATOR)
   }
 

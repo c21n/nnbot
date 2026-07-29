@@ -4,6 +4,7 @@ import { Memory, MemoryMetadata, MemoryType } from '../../types/index.js'
 import { SearchResult } from '../../types/search.types.js'
 import { BM25Service } from '../../search/bm25.service.js'
 import { logger } from '../../utils/logger.js'
+import { SqliteMemoryRepository } from '../sqlite/memory.repository.js'
 
 // Flatten MemoryMetadata into vectra-compatible Record
 function flattenMetadata(memory: Memory): Record<string, string | number | boolean> {
@@ -70,7 +71,10 @@ function matchesWhere(
 }
 
 export class VectraMemoryRepository implements IMemoryRepository {
-  constructor(private bm25?: BM25Service) {}
+  constructor(
+    private bm25?: BM25Service,
+    private metadataRepo: SqliteMemoryRepository = new SqliteMemoryRepository(),
+  ) {}
 
   async save(memory: Memory): Promise<void> {
     const index = await getVectraIndex()
@@ -89,8 +93,46 @@ export class VectraMemoryRepository implements IMemoryRepository {
       },
     })
 
+    // Keep SQLite as the metadata and BM25 source of truth. Vectra stores the
+    // vector and searchable text, while the WebUI reads metadata from SQLite.
+    await this.metadataRepo.save(memory)
+
     // Sync to FTS5 for BM25 search
     this.bm25?.syncSave(memory)
+  }
+
+  /**
+   * Rebuild the SQLite metadata mirror from an existing Vectra index.
+   * This keeps indexes created before the mirror was introduced visible to
+   * the WebUI and keyword search.
+   */
+  async syncMetadataMirror(): Promise<number> {
+    const index = await getVectraIndex()
+    const items = await index.listItems()
+    let synced = 0
+
+    for (const item of items) {
+      const metadata = item.metadata
+      const embedding = item.vector as number[] | undefined
+      if (!metadata._id || !metadata._text || !embedding?.length) continue
+
+      await this.metadataRepo.save({
+        id: String(metadata._id),
+        text: String(metadata._text),
+        embedding,
+        metadata: unflattenMetadata(metadata),
+        created_at: Number(metadata.created_at || 0),
+        last_accessed_at: Number(metadata.last_accessed_at || 0),
+        access_count: Number(metadata.access_count || 0),
+      })
+      synced += 1
+    }
+
+    if (synced > 0) {
+      this.bm25?.rebuildIndex()
+    }
+
+    return synced
   }
 
   async query(params: {
@@ -206,6 +248,8 @@ export class VectraMemoryRepository implements IMemoryRepository {
       last_accessed_at: data.last_accessed_at || Number(existing.metadata.last_accessed_at || 0),
       access_count: data.access_count || Number(existing.metadata.access_count || 0),
     }
+    await this.metadataRepo.save(updatedMemory)
+
     this.bm25?.syncUpdate(id, updatedMemory)
   }
 
@@ -218,8 +262,9 @@ export class VectraMemoryRepository implements IMemoryRepository {
       await index.deleteItem(target.id)
     }
 
-    // Sync to FTS5
+    // Sync before deleting the SQLite row so BM25 can resolve its rowid.
     this.bm25?.syncDelete(id)
+    await this.metadataRepo.delete(id)
   }
 
   async deleteByUser(userId: string): Promise<number> {
@@ -229,7 +274,7 @@ export class VectraMemoryRepository implements IMemoryRepository {
     const toDelete = items.filter((item) => item.metadata.user_id === userId)
 
     for (const item of toDelete) {
-      await index.deleteItem(item.id)
+      await this.delete(String(item.metadata._id))
     }
 
     return toDelete.length
@@ -321,7 +366,7 @@ export class VectraMemoryRepository implements IMemoryRepository {
     const toDelete = items.filter((item) => idsToDelete.has(String(item.metadata._id)))
 
     for (const item of toDelete) {
-      await index.deleteItem(item.id)
+      await this.delete(String(item.metadata._id))
     }
 
     return toDelete.length
@@ -338,7 +383,7 @@ export class VectraMemoryRepository implements IMemoryRepository {
     const toDelete = items.filter((item) => idsToDelete.has(String(item.metadata._id)))
 
     for (const item of toDelete) {
-      await index.deleteItem(item.id)
+      await this.delete(String(item.metadata._id))
     }
 
     return toDelete.length

@@ -21,6 +21,7 @@ import type {
   MemoryRow,
 } from "./types/webui.types.js";
 import { ok, fail } from "./utils/response.js";
+import { BM25Service, VectraMemoryRepository } from "../memory/index.js";
 
 // ── Helpers ──
 
@@ -45,7 +46,6 @@ function openDb(): Database.Database | null {
   if (!existsSync(dbPath)) return null;
 
   const db = new Database(dbPath, { readonly: true });
-  db.pragma("journal_mode=WAL");
   return db;
 }
 
@@ -56,6 +56,17 @@ function openDbWritable(): Database.Database | null {
   const db = new Database(dbPath);
   db.pragma("journal_mode=WAL");
   return db;
+}
+
+let vectorMemoryRepo: VectraMemoryRepository | null = null;
+
+function getVectorMemoryRepo(): VectraMemoryRepository {
+  if (!vectorMemoryRepo) {
+    const bm25 = new BM25Service();
+    bm25.initialize();
+    vectorMemoryRepo = new VectraMemoryRepository(bm25);
+  }
+  return vectorMemoryRepo;
 }
 
 function toDate(ts: number): string {
@@ -309,22 +320,16 @@ export async function memoryApi(app: FastifyInstance): Promise<void> {
   app.delete("/api/memory/:id", async (request, reply) => {
     const { id } = request.params as { id: string };
 
-    const db = openDbWritable();
-    if (!db) {
-      return reply.status(404).send(fail("Memory database not found"));
-    }
-
     try {
-      const result = db.prepare(`DELETE FROM memories WHERE id = ?`).run(id);
-      if (result.changes === 0) {
+      const memory = await getVectorMemoryRepo().findById(id);
+      if (!memory) {
         return reply.status(404).send(fail("Memory not found"));
       }
+      await getVectorMemoryRepo().delete(id);
       return reply.send(ok<void>(undefined));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return reply.status(500).send(fail(message));
-    } finally {
-      db.close();
     }
   });
 
@@ -338,14 +343,12 @@ export async function memoryApi(app: FastifyInstance): Promise<void> {
     }
 
     const db = openDbWritable();
-    if (!db) {
-      return reply.status(404).send(fail("Memory database not found"));
-    }
-
     try {
-      const memoriesDeleted = db
-        .prepare(`DELETE FROM memories WHERE user_id = ?`)
-        .run(userId).changes;
+      const memoriesDeleted = await getVectorMemoryRepo().deleteByUser(userId);
+      if (!db) {
+        return reply.send(ok<DeletionResult>({ memoriesDeleted, messagesDeleted: 0 }));
+      }
+
       const messagesDeleted = db
         .prepare(`DELETE FROM messages WHERE user_id = ?`)
         .run(userId).changes;
@@ -357,7 +360,7 @@ export async function memoryApi(app: FastifyInstance): Promise<void> {
       const message = error instanceof Error ? error.message : String(error);
       return reply.status(500).send(fail(message));
     } finally {
-      db.close();
+      db?.close();
     }
   });
 }
