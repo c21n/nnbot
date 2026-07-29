@@ -70,10 +70,13 @@ admin:
     - /clear
 productManager:
   enabled: true
-  # Product-manager mode is denied unless the sender or group is allowlisted.
-  userIds: []
-  groupIds: []
-  inheritAdminUserIds: true
+  # Product-manager analysis is available to all users.
+  notification:
+    enabled: true
+    ownerUserId: ${PRODUCT_MANAGER_OWNER_USER_ID}
+    corpId: ${WEWORK_CORP_ID}
+    agentId: ${WEWORK_AGENT_ID}
+    secret: ${WEWORK_APP_SECRET}
 rules: []
 memory:
   enabled: true

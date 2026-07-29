@@ -21,10 +21,10 @@ import { PLUGIN_PRIORITY } from "../constants.js";
 import { logger } from "../core/logger.js";
 import {
   PRODUCT_MANAGER_SYSTEM_PROMPT,
-  isProductManagerAuthorized,
   isProductManagerRequest,
   isPromptExtractionRequest,
 } from "../services/product-manager.js";
+import { ProductManagerNotifier } from "../services/product-manager-notifier.js";
 import { guardAssistantResponse, PROMPT_LEAK_REPLY, wrapToolDataForModel } from "../services/response-guard.js";
 import {
   executeTool,
@@ -53,6 +53,7 @@ class AIChatPluginImpl {
   private hooks: AIChatHooks = {};
   private toolRegistry!: IToolRegistry;
   private config!: PluginServices["config"];
+  private productManagerNotifier!: ProductManagerNotifier;
 
   /**
    * Initialize plugin with services
@@ -65,6 +66,10 @@ class AIChatPluginImpl {
     this.hooks = services.hooks;
     this.toolRegistry = services.toolRegistry;
     this.config = services.config;
+    this.productManagerNotifier = new ProductManagerNotifier(
+      services.config.productManager?.notification,
+      this.storage,
+    );
 
     // Check for plugin-specific LLM config
     const pluginConfig = services.config.plugins?.ai_chat;
@@ -103,11 +108,9 @@ class AIChatPluginImpl {
       return { content: PROMPT_LEAK_REPLY, replyTo: true };
     }
 
-    const productManagerRequest = isProductManagerRequest(event.message);
-    if (productManagerRequest && !isProductManagerAuthorized(event, this.config)) {
-      logger.warn(`[ai_chat] Product manager access denied for ${event.userId}`);
-      return { content: "该产品经理功能尚未向当前账号或群组开放。", replyTo: true };
-    }
+    const productManagerRequest = Boolean(
+      this.config.productManager?.enabled && isProductManagerRequest(event.message),
+    );
 
     let responseAttachments: ToolAttachment[] = [];
 
@@ -265,6 +268,12 @@ class AIChatPluginImpl {
       // Save conversation
       await this.storage.saveMessage(event.userId, "user", event.message);
       await this.storage.saveMessage(event.userId, "assistant", reply);
+
+      if (productManagerRequest) {
+        void this.productManagerNotifier.record(event, reply).catch((error: unknown) => {
+          logger.error(`[ProductManager] Failed to persist request: ${error}`);
+        });
+      }
 
       return {
         content: reply,

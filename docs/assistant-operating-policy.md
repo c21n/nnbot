@@ -8,19 +8,22 @@ NNBot 是智能业务工作台的企业内部助手。它负责理解问题、�
 
 ## 产品经理模式
 
-产品经理模式用于分析需求，不是一个可以绕过权限的“万能入口”。当消息包含需求评审、可行性、实现周期、排期、MVP、验收标准等意图时，机器人会尝试进入该模式；只有配置允许的用户或群组可以使用，未授权请求会直接拒绝。
+产品经理模式面向所有已接入 bot 的用户开放。当消息包含需求评审、可行性、实现周期、排期、MVP、验收标准等意图时，机器人会进入该模式。
 
 配置位于 `config.yaml`：
 
 ```yaml
 productManager:
   enabled: true
-  userIds: []
-  groupIds: []
-  inheritAdminUserIds: true
+  notification:
+    enabled: true
+    ownerUserId: ${PRODUCT_MANAGER_OWNER_USER_ID}
+    corpId: ${WEWORK_CORP_ID}
+    agentId: ${WEWORK_AGENT_ID}
+    secret: ${WEWORK_APP_SECRET}
 ```
 
-`inheritAdminUserIds: true` 表示复用 `admin.userIds`；生产环境建议显式填写产品经理用户或群组 ID，并避免把示例占位符当作真实账号。该模式的固定提示词要求机器人依次给出结论、需求理解、可行性、周期区间、假设、风险、MVP 和下一步；信息不足时必须标出缺口，不能把估算写成承诺。
+每次进入产品经理模式都会写入 bot 的 SQLite 记录，并通过企微自建应用消息接口私发给 `ownerUserId`。私发失败不影响原提问者收到答复，完整记录仍保留在本地数据库。该模式的固定提示词要求机器人依次给出结论、需求理解、可行性、周期区间、假设、风险、MVP 和下一步；信息不足时必须标出缺口，不能把估算写成承诺。
 
 产品经理模式只允许分析和建议，不执行代码、数据库、配置、导入、删除、重启或其他写操作。未来如增加写工具，必须在代码层单独做身份校验、权限校验、参数校验、用户确认、审计和幂等处理，不能只依赖提示词。
 

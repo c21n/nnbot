@@ -1,5 +1,3 @@
-import type { Config, Event } from "../interfaces.js";
-
 const PRODUCT_MANAGER_INTENT_PATTERNS: readonly RegExp[] = [
   /产品经理|需求分析|需求评审|产品评审|可行性|实现可能性|技术可行/u,
   /(?:分析|评估|判断|拆解).{0,20}(?:需求|功能|方案|项目)/u,
@@ -45,28 +43,4 @@ export function isProductManagerRequest(message: string): boolean {
 
 export function isPromptExtractionRequest(message: string): boolean {
   return PROMPT_EXTRACTION_PATTERNS.some((pattern) => pattern.test(message));
-}
-
-export function isProductManagerAuthorized(event: Event, config: Config): boolean {
-  const policy = config.productManager;
-  if (!policy?.enabled) return false;
-
-  const allowedUsers = new Set(normalizeIds(policy.userIds));
-  if (policy.inheritAdminUserIds) {
-    for (const userId of normalizeIds(config.admin.userIds)) allowedUsers.add(userId);
-  }
-
-  const userId = normalizeId(event.userId);
-  if (userId && allowedUsers.has(userId)) return true;
-
-  const groupId = normalizeId(event.groupId);
-  return Boolean(groupId && normalizeIds(policy.groupIds).includes(groupId));
-}
-
-function normalizeIds(values: readonly string[] | undefined): string[] {
-  return (values ?? []).map(normalizeId).filter(Boolean);
-}
-
-function normalizeId(value: string | null | undefined): string {
-  return String(value ?? "").trim();
 }

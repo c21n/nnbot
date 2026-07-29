@@ -46,9 +46,13 @@ const DEFAULT_CONFIG: Config = {
   },
   productManager: {
     enabled: true,
-    userIds: [],
-    groupIds: [],
-    inheritAdminUserIds: true,
+    notification: {
+      enabled: false,
+      ownerUserId: "",
+      corpId: "",
+      agentId: "",
+      secret: "",
+    },
   },
   context: {
     historyLimit: 10,
@@ -99,7 +103,27 @@ export class ConfigManager {
       plugins: { ...defaults.plugins, ...overrides.plugins },
       rules: overrides.rules ?? defaults.rules,
       admin: { ...defaults.admin, ...overrides.admin },
-      productManager: { ...defaults.productManager, ...overrides.productManager },
+      productManager: {
+        ...defaults.productManager,
+        ...overrides.productManager,
+        notification: {
+          enabled: overrides.productManager?.notification?.enabled
+            ?? defaults.productManager.notification?.enabled
+            ?? false,
+          ownerUserId: overrides.productManager?.notification?.ownerUserId
+            ?? defaults.productManager.notification?.ownerUserId
+            ?? "",
+          corpId: overrides.productManager?.notification?.corpId
+            ?? defaults.productManager.notification?.corpId
+            ?? "",
+          agentId: overrides.productManager?.notification?.agentId
+            ?? defaults.productManager.notification?.agentId
+            ?? "",
+          secret: overrides.productManager?.notification?.secret
+            ?? defaults.productManager.notification?.secret
+            ?? "",
+        },
+      },
       context: { ...defaults.context, ...overrides.context },
       wecom: overrides.wecom ?? defaults.wecom,
       workbench: overrides.workbench ?? defaults.workbench,
@@ -219,6 +243,20 @@ export class ConfigManager {
             },
           }
         : {}),
+      productManager: {
+        ...config.productManager,
+        ...(config.productManager.notification
+          ? {
+              notification: {
+                ...config.productManager.notification,
+                ownerUserId: substitute(config.productManager.notification.ownerUserId) as string,
+                corpId: substitute(config.productManager.notification.corpId) as string,
+                agentId: substitute(config.productManager.notification.agentId) as string,
+                secret: substitute(config.productManager.notification.secret) as string,
+              },
+            }
+          : {}),
+      },
       memory,
       tools,
       providers: providersConfig,

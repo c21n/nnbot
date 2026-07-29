@@ -468,12 +468,19 @@ export interface AdminConfig {
   commands: string[];
 }
 
-/** Access policy for the product-manager response mode. */
+/** Private notification settings for product-manager requests. */
+export interface ProductManagerNotificationConfig {
+  enabled: boolean;
+  ownerUserId: string;
+  corpId: string;
+  agentId: string;
+  secret: string;
+}
+
+/** Product-manager response mode configuration. */
 export interface ProductManagerConfig {
   enabled: boolean;
-  userIds: string[];
-  groupIds: string[];
-  inheritAdminUserIds?: boolean;
+  notification?: ProductManagerNotificationConfig;
 }
 
 /**
