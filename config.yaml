@@ -68,6 +68,12 @@ admin:
     - /plugins
     - /status
     - /clear
+productManager:
+  enabled: true
+  # Product-manager mode is denied unless the sender or group is allowlisted.
+  userIds: []
+  groupIds: []
+  inheritAdminUserIds: true
 rules: []
 memory:
   enabled: true

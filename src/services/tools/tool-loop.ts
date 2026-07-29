@@ -13,6 +13,7 @@ import type {
 } from "./types.js";
 import { executeAllTools } from "./tool-executor.js";
 import { logger } from "../../core/logger.js";
+import { wrapToolDataForModel } from "../response-guard.js";
 
 const DEFAULT_MAX_STEPS = 10;
 
@@ -95,5 +96,5 @@ export function collectDirectMessages(results: ToolResult[]): string[] {
 }
 
 function formatToolResult(result: ToolResult): string {
-  return result.success ? result.content : `[错误] ${result.content}`;
+  return wrapToolDataForModel(result.success ? result.content : `[工具错误] ${result.content}`);
 }

@@ -44,6 +44,12 @@ const DEFAULT_CONFIG: Config = {
     userIds: [],
     commands: ["/help", "/plugins", "/status", "/clear"],
   },
+  productManager: {
+    enabled: true,
+    userIds: [],
+    groupIds: [],
+    inheritAdminUserIds: true,
+  },
   context: {
     historyLimit: 10,
     messageBufferDelay: 3000,
@@ -93,6 +99,7 @@ export class ConfigManager {
       plugins: { ...defaults.plugins, ...overrides.plugins },
       rules: overrides.rules ?? defaults.rules,
       admin: { ...defaults.admin, ...overrides.admin },
+      productManager: { ...defaults.productManager, ...overrides.productManager },
       context: { ...defaults.context, ...overrides.context },
       wecom: overrides.wecom ?? defaults.wecom,
       workbench: overrides.workbench ?? defaults.workbench,

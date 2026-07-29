@@ -468,6 +468,14 @@ export interface AdminConfig {
   commands: string[];
 }
 
+/** Access policy for the product-manager response mode. */
+export interface ProductManagerConfig {
+  enabled: boolean;
+  userIds: string[];
+  groupIds: string[];
+  inheritAdminUserIds?: boolean;
+}
+
 /**
  * Memory system configuration
  */
@@ -569,6 +577,7 @@ export interface Config {
   plugins: PluginConfig;
   rules: Rule[];
   admin: AdminConfig;
+  productManager: ProductManagerConfig;
   context: ContextConfig;
   memory?: MemoryConfig;
   tools?: ToolsConfig;

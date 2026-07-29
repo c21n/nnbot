@@ -20,6 +20,13 @@ import { createPlugin } from "../core/create-plugin.js";
 import { PLUGIN_PRIORITY } from "../constants.js";
 import { logger } from "../core/logger.js";
 import {
+  PRODUCT_MANAGER_SYSTEM_PROMPT,
+  isProductManagerAuthorized,
+  isProductManagerRequest,
+  isPromptExtractionRequest,
+} from "../services/product-manager.js";
+import { guardAssistantResponse, PROMPT_LEAK_REPLY, wrapToolDataForModel } from "../services/response-guard.js";
+import {
   executeTool,
   runToolLoop,
   type IToolRegistry,
@@ -91,11 +98,25 @@ class AIChatPluginImpl {
       return null;
     }
 
+    if (isPromptExtractionRequest(event.message)) {
+      logger.warn(`[ai_chat] Prompt extraction request denied for ${event.userId}`);
+      return { content: PROMPT_LEAK_REPLY, replyTo: true };
+    }
+
+    const productManagerRequest = isProductManagerRequest(event.message);
+    if (productManagerRequest && !isProductManagerAuthorized(event, this.config)) {
+      logger.warn(`[ai_chat] Product manager access denied for ${event.userId}`);
+      return { content: "该产品经理功能尚未向当前账号或群组开放。", replyTo: true };
+    }
+
     let responseAttachments: ToolAttachment[] = [];
 
     try {
       // Get persona for this user
-      const systemPrompt = await this.persona.getPersona(event.userId);
+      const baseSystemPrompt = await this.persona.getPersona(event.userId);
+      const systemPrompt = productManagerRequest
+        ? `${baseSystemPrompt}\n\n${PRODUCT_MANAGER_SYSTEM_PROMPT}`
+        : baseSystemPrompt;
 
       // Build user info context
       const userInfo = this.buildUserInfo(event);
@@ -206,7 +227,7 @@ class AIChatPluginImpl {
                   role: "user",
                   content: [
                     "系统已直接执行业绩排行榜工具。",
-                    toolResult.content,
+                    wrapToolDataForModel(toolResult.content),
                     "请根据工具结果直接回答用户；如果用户询问排行或导出图片，请说明图片已随本次回复发送。不要声称没有导出功能。",
                   ].join("\n\n"),
                 },
@@ -238,6 +259,8 @@ class AIChatPluginImpl {
       if (this.hooks.afterLLM) {
         reply = await this.hooks.afterLLM(reply, event);
       }
+
+      reply = guardAssistantResponse(reply);
 
       // Save conversation
       await this.storage.saveMessage(event.userId, "user", event.message);
