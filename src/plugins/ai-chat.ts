@@ -192,6 +192,7 @@ class AIChatPluginImpl {
         const requireToolCall = activeTools.some((tool) => (
           tool.name === "workbench_capabilities"
           || tool.name === "workbench_performance_ranking"
+          || tool.name === "workbench_patent_assistant"
         ));
         logger.plugin("ai_chat", `工具调用已启用: ${activeTools.map((t) => t.name).join(", ")}`);
 

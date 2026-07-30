@@ -51,6 +51,16 @@ export interface PerformanceRankingImage {
   readonly contentType: string;
 }
 
+export interface PatentProposalArtifactResponse {
+  readonly artifactId: string;
+  readonly templateVersion: string;
+  readonly fileName: string;
+  readonly contentType: string;
+  readonly contentBase64: string;
+  readonly documentMode?: "draft" | "final";
+  readonly quality?: Record<string, unknown>;
+}
+
 export class WorkbenchApiError extends Error {
   readonly status: number;
   readonly endpoint: string;
@@ -100,6 +110,42 @@ export class WorkbenchApiClient {
     return this.request<WorkbenchCapabilitiesResponse>("/api/assistant/capabilities");
   }
 
+  createPatentCase(input: Record<string, unknown>): Promise<Record<string, unknown>> {
+    return this.request<Record<string, unknown>>("/api/patent/cases", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  getPatentCase(caseId: string): Promise<Record<string, unknown>> {
+    return this.request<Record<string, unknown>>(
+      `/api/patent/cases/${encodeURIComponent(caseId)}`,
+    );
+  }
+
+  validatePatentProposal(caseId: string): Promise<Record<string, unknown>> {
+    return this.request<Record<string, unknown>>(
+      `/api/patent/cases/${encodeURIComponent(caseId)}/proposal/validate`,
+      { method: "POST" },
+    );
+  }
+
+  previewPatentProposal(caseId: string): Promise<Record<string, unknown>> {
+    return this.request<Record<string, unknown>>(
+      `/api/patent/cases/${encodeURIComponent(caseId)}/proposal/preview`,
+    );
+  }
+
+  generatePatentProposal(
+    caseId: string,
+    format: "docx" | "pdf",
+  ): Promise<PatentProposalArtifactResponse> {
+    const endpoint = format === "pdf"
+      ? `/api/patent/cases/${encodeURIComponent(caseId)}/proposal/pdf`
+      : `/api/patent/cases/${encodeURIComponent(caseId)}/proposal`;
+    return this.request<PatentProposalArtifactResponse>(endpoint, { method: "POST" }, 120_000);
+  }
+
   getPerformanceRankings(
     view: "teams" | "people",
     filters: Record<string, string> = {},
@@ -139,9 +185,13 @@ export class WorkbenchApiClient {
     };
   }
 
-  private async request<T>(endpoint: string, init: RequestInit = {}): Promise<T> {
+  private async request<T>(
+    endpoint: string,
+    init: RequestInit = {},
+    timeoutMs = this.timeoutMs,
+  ): Promise<T> {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     const headers = new Headers(init.headers);
     headers.set("Accept", "application/json");
     if (init.body) headers.set("Content-Type", "application/json");

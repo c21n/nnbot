@@ -3,6 +3,7 @@ import {
   WorkbenchCapabilitiesTool,
   WorkbenchKnowledgeTool,
   WorkbenchPerformanceTool,
+  WorkbenchPatentAssistantTool,
 } from "./workbench.js";
 import type { ToolContext } from "../types.js";
 
@@ -61,5 +62,61 @@ describe("Workbench tools", () => {
     expect(client.getPerformanceRankings).toHaveBeenCalledTimes(2);
     expect(result.attachments).toHaveLength(2);
     expect(client.getPerformanceRankingImage).toHaveBeenCalledTimes(2);
+  });
+
+  it("creates a patent case from explicitly supplied facts", async () => {
+    const client = {
+      createPatentCase: vi.fn().mockResolvedValue({
+        id: "case-1",
+        status: "draft",
+        companyProfile: { companyName: "示例公司" },
+        missingFields: ["financialProfile"],
+      }),
+    };
+    const tool = new WorkbenchPatentAssistantTool(client as never);
+
+    const result = await tool.execute({
+      action: "create",
+      caseData: {
+        companyProfile: { companyName: "示例公司" },
+        serviceObjective: "输出专利培育方案",
+        patentRecords: [{ number: "CN123", title: "示例专利" }],
+      },
+    }, context);
+
+    expect(result.success).toBe(true);
+    expect(result.content).toContain("case-1");
+    expect(client.createPatentCase).toHaveBeenCalledWith({
+      companyProfile: { companyName: "示例公司" },
+      serviceObjective: "输出专利培育方案",
+      patentRecords: [{ number: "CN123", title: "示例专利" }],
+    });
+  });
+
+  it("returns patent artifact metadata without exposing base64 content", async () => {
+    const client = {
+      generatePatentProposal: vi.fn().mockResolvedValue({
+        artifactId: "artifact-1",
+        templateVersion: "patent-v1",
+        fileName: "示例方案.docx",
+        contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        contentBase64: "c2Vuc2l0aXZlLWJ5dGVz",
+        documentMode: "draft",
+        quality: { status: "ready" },
+      }),
+    };
+    const tool = new WorkbenchPatentAssistantTool(client as never);
+
+    const result = await tool.execute({
+      action: "export",
+      caseId: "case-1",
+      format: "docx",
+    }, context);
+
+    expect(result.success).toBe(true);
+    expect(result.content).toContain("示例方案.docx");
+    expect(result.content).not.toContain("c2Vuc2l0aXZlLWJ5dGVz");
+    expect(result.content).toContain("请在工作台对应案件中下载");
+    expect(client.generatePatentProposal).toHaveBeenCalledWith("case-1", "docx");
   });
 });

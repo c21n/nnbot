@@ -6,6 +6,18 @@ const MAX_POLICY_RESULTS = 20;
 const MAX_POLICY_EVIDENCE = 30;
 const MAX_RANKING_ROWS = 50;
 
+const optionalText = (description: string): ToolParameter => ({
+  type: "string",
+  description,
+  optional: true,
+});
+
+const optionalNumber = (description: string): ToolParameter => ({
+  type: "number",
+  description,
+  optional: true,
+});
+
 const companyProfileProperties: Record<string, ToolParameter> = {
   region: { type: "string", description: "企业所在地区，例如广州、深圳。", optional: true },
   district: { type: "string", description: "企业所在区县。", optional: true },
@@ -195,6 +207,228 @@ export class WorkbenchPerformanceTool implements ITool {
   }
 }
 
+const patentCaseDataProperties: Record<string, ToolParameter> = {
+  companyProfile: {
+    type: "object",
+    description: "企业画像，只填写用户明确提供的事实。",
+    optional: true,
+    properties: {
+      companyName: optionalText("企业名称。"),
+      location: optionalText("注册地或主要经营地。"),
+      industry: optionalText("所属行业。"),
+      mainProducts: optionalText("主营产品或业务。"),
+      coreTechnology: optionalText("核心技术。"),
+      contactContext: optionalText("本次沟通背景。"),
+      foundedDate: optionalText("成立时间。"),
+      registeredCapital: optionalText("注册资本。"),
+      targetCustomers: optionalText("目标客户。"),
+      marketPosition: optionalText("市场地位或竞争情况。"),
+      productRevenueProfile: optionalText("产品收入结构。"),
+    },
+  },
+  financialProfile: {
+    type: "object",
+    description: "经营和财务信息；金额口径由用户提供并保持原单位。",
+    optional: true,
+    properties: {
+      summary: optionalText("经营、财务与研发概况。"),
+      annualMetrics: {
+        type: "array",
+        description: "年度经营指标，通常填写近三年。",
+        optional: true,
+        items: {
+          type: "object",
+          description: "单年度经营指标。",
+          properties: {
+            year: optionalText("年份。"),
+            revenue: optionalNumber("营业收入。"),
+            netProfit: optionalNumber("净利润。"),
+            netAssets: optionalNumber("净资产。"),
+            debtRatio: optionalNumber("资产负债率，百分比数值。"),
+            rdExpense: optionalNumber("研发费用。"),
+            rdExpenseRatio: optionalNumber("研发费用占比，百分比数值。"),
+            highTechRevenueRatio: optionalNumber("高新技术产品或服务收入占比，百分比数值。"),
+          },
+        },
+      },
+    },
+  },
+  rdProfile: {
+    type: "object",
+    description: "研发人员、项目和研发组织信息。",
+    optional: true,
+    properties: {
+      employeeSummary: optionalText("员工与科技人员概况。"),
+      rdSummary: optionalText("研发投入概况。"),
+      projectSummary: optionalText("研发项目概况。"),
+      rdOrganizationSummary: optionalText("研发组织和管理机制。"),
+      metrics: {
+        type: "object",
+        description: "研发结构化指标。",
+        optional: true,
+        properties: {
+          employeeCount: optionalNumber("员工总数。"),
+          technologyStaffCount: optionalNumber("科技人员数量。"),
+          rdStaffCount: optionalNumber("研发人员数量。"),
+          rdProjectCount: optionalNumber("研发项目数量。"),
+        },
+      },
+    },
+  },
+  cultivationProfile: {
+    type: "object",
+    description: "企业培育阶段、目标项目和未来目标。",
+    optional: true,
+    properties: {
+      currentStage: optionalText("当前发展阶段。"),
+      targetPrograms: optionalText("目标项目或资质。"),
+      goals: optionalText("未来培育目标。"),
+    },
+  },
+  serviceObjective: optionalText("本次专利或培育服务目标。"),
+  painPoints: optionalText("已知问题或风险。"),
+  technicalDisclosure: optionalText("技术交底或技术材料摘要。"),
+  supportingMaterials: optionalText("已提供或计划提供的证明材料。"),
+  patentRecords: {
+    type: "array",
+    description: "用户提供的专利记录，不要自行补造专利号、日期或法律状态。",
+    optional: true,
+    items: {
+      type: "object",
+      description: "单条专利记录。",
+      properties: {
+        number: optionalText("专利号。"),
+        title: optionalText("专利名称。"),
+        applicant: optionalText("申请人。"),
+        inventors: optionalText("发明人。"),
+        applicationDate: optionalText("申请日期，使用 YYYY、YYYY-MM 或 YYYY-MM-DD。"),
+        type: optionalText("专利类型。"),
+        userSuppliedStatus: optionalText("用户提供的状态，例如申请中、有效、无效。"),
+        sourceMaterialId: optionalText("来源材料编号；没有时不要猜。"),
+      },
+    },
+  },
+  evidenceItems: {
+    type: "array",
+    description: "证明材料清单，只记录用户明确提供的材料。",
+    optional: true,
+    items: {
+      type: "object",
+      description: "单条证明材料。",
+      properties: {
+        name: optionalText("材料名称。"),
+        category: optionalText("材料类别。"),
+        status: optionalText("材料状态。"),
+        note: optionalText("材料备注。"),
+        sourceMaterialId: optionalText("来源材料编号；没有时不要猜。"),
+      },
+    },
+  },
+};
+
+export class WorkbenchPatentAssistantTool implements ITool {
+  readonly name = "workbench_patent_assistant";
+  readonly description = "调用智能业务工作台专利助手，创建或读取案件，校验资料完整性，预览并生成专利与企业培育方案。只使用用户明确提供的事实，不猜测缺失数据。";
+  readonly parameters: Record<string, ToolParameter> = {
+    action: {
+      type: "string",
+      description: "操作类型：create 创建案件，get 读取案件，validate 校验，preview 预览，export 生成 Word 或 PDF。",
+      enum: ["create", "get", "validate", "preview", "export"],
+    },
+    caseId: {
+      type: "string",
+      description: "已有案件编号。读取、校验、预览或生成文件时必填。",
+      optional: true,
+    },
+    format: {
+      type: "string",
+      description: "导出格式，默认 docx。",
+      enum: ["docx", "pdf"],
+      optional: true,
+    },
+    caseData: {
+      type: "object",
+      description: "创建案件时的结构化事实。缺少信息保持为空，不要根据常识补全。",
+      optional: true,
+      properties: patentCaseDataProperties,
+    },
+  };
+  readonly active = true;
+
+  constructor(private readonly client: WorkbenchApiClient) {}
+
+  async execute(args: Record<string, unknown>, _context: ToolContext): Promise<ToolResult> {
+    const action = typeof args.action === "string" ? args.action : "";
+    const caseId = typeof args.caseId === "string" ? args.caseId.trim() : "";
+
+    try {
+      switch (action) {
+        case "create": {
+          const caseData = asRecord(args.caseData);
+          if (!caseData) return failure("创建专利案件需要提供 caseData；缺少的字段可以不填，但不能凭空补齐。出错时请先向用户询问缺失信息。");
+          const result = await this.client.createPatentCase(caseData);
+          return success(JSON.stringify(summarizePatentCase(result), null, 2));
+        }
+        case "get":
+          if (!caseId) return failure("读取专利案件需要提供 caseId。");
+          return success(JSON.stringify(summarizePatentCase(await this.client.getPatentCase(caseId)), null, 2));
+        case "validate":
+          if (!caseId) return failure("校验专利方案需要提供 caseId。");
+          return success(JSON.stringify(await this.client.validatePatentProposal(caseId), null, 2));
+        case "preview":
+          if (!caseId) return failure("预览专利方案需要提供 caseId。");
+          return success(JSON.stringify(await this.client.previewPatentProposal(caseId), null, 2));
+        case "export": {
+          if (!caseId) return failure("生成专利方案文件需要提供 caseId。");
+          const format = args.format === "pdf" ? "pdf" : "docx";
+          const artifact = await this.client.generatePatentProposal(caseId, format);
+          return success(JSON.stringify({
+            caseId,
+            artifactId: artifact.artifactId,
+            fileName: artifact.fileName,
+            contentType: artifact.contentType,
+            documentMode: artifact.documentMode,
+            quality: artifact.quality,
+            byteLength: base64ByteLength(artifact.contentBase64),
+            fileDelivery: "文件已生成。当前机器人不把文件内容放入模型上下文，请在工作台对应案件中下载。",
+          }, null, 2));
+        }
+        default:
+          return failure("专利助手 action 必须是 create、get、validate、preview 或 export。");
+      }
+    } catch (error) {
+      return workbenchFailure(error);
+    }
+  }
+}
+
+function summarizePatentCase(value: Record<string, unknown>): Record<string, unknown> {
+  const analysis = asRecord(value.analysis);
+  return {
+    id: value.id,
+    status: value.status,
+    companyProfile: value.companyProfile,
+    serviceObjective: value.serviceObjective,
+    painPoints: value.painPoints,
+    financialProfile: value.financialProfile,
+    rdProfile: value.rdProfile,
+    cultivationProfile: value.cultivationProfile,
+    patentRecords: value.patentRecords,
+    evidenceItems: value.evidenceItems,
+    missingFields: value.missingFields,
+    statistics: value.statistics,
+    analysis: analysis ? {
+      dataQuality: analysis.dataQuality,
+      readiness: analysis.readiness,
+      policyMatches: analysis.policyMatches,
+      roadmap: analysis.roadmap,
+      nextActions: analysis.nextActions,
+    } : undefined,
+    createdAt: value.createdAt,
+    updatedAt: value.updatedAt,
+  };
+}
+
 function normalizeLimit(value: unknown): number {
   if (typeof value !== "number" || !Number.isInteger(value)) return 6;
   return Math.min(MAX_KNOWLEDGE_LIMIT, Math.max(1, value));
@@ -233,4 +467,10 @@ function workbenchFailure(error: unknown): ToolResult {
   const message = error instanceof Error ? error.message : String(error);
   const status = (error as WorkbenchApiError)?.status;
   return failure(status === 408 ? "工作台响应超时，请稍后重试。" : `工作台请求失败：${message}`);
+}
+
+function base64ByteLength(value: string): number {
+  if (!value) return 0;
+  const padding = value.endsWith("==") ? 2 : value.endsWith("=") ? 1 : 0;
+  return Math.max(0, Math.floor(value.length * 3 / 4) - padding);
 }

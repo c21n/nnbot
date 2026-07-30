@@ -85,6 +85,33 @@ describe("WorkbenchApiClient", () => {
     );
   });
 
+  it("calls the patent case and proposal endpoints", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: "case-1" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        artifactId: "artifact-1",
+        templateVersion: "patent-v1",
+        fileName: "示例方案.pdf",
+        contentType: "application/pdf",
+        contentBase64: "cGRm",
+      }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new WorkbenchApiClient({
+      enabled: true,
+      baseUrl: "http://127.0.0.1:4177",
+    });
+
+    await expect(client.createPatentCase({ serviceObjective: "测试" })).resolves.toMatchObject({ id: "case-1" });
+    await expect(client.generatePatentProposal("case-1", "pdf")).resolves.toMatchObject({
+      artifactId: "artifact-1",
+      contentType: "application/pdf",
+    });
+
+    expect(fetchMock.mock.calls[0][0]).toBe("http://127.0.0.1:4177/api/patent/cases");
+    expect(fetchMock.mock.calls[1][0]).toBe("http://127.0.0.1:4177/api/patent/cases/case-1/proposal/pdf");
+  });
+
   it("turns non-success responses into a typed API error", async () => {
     vi.stubGlobal(
       "fetch",
